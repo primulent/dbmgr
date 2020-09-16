@@ -1,0 +1,5 @@
+﻿myServer
+instanceName
+
+
+True

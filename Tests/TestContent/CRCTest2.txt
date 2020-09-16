@@ -1,0 +1,1 @@
+﻿This is a test of the CRC algorithm that is not the same.

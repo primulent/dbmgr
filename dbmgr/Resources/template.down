@@ -1,0 +1,4 @@
+﻿-- **** DOWN SCRIPT ****
+-- Created on: {DATETIME} by {CREATOR}
+-- Purpose:
+-- Note: use {ONEWAY_MIGRATION} on a line by itself below this to indicate no down

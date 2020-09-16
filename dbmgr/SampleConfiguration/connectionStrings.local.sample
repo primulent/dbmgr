@@ -1,0 +1,9 @@
+<!-- Rename this file to connectionStrings.local -->
+<!-- Make sure it's in the bin folder of the running application -->
+<connectionStrings>
+  <!--<add name="SqlServerData" connectionString="Data Source={0};Initial Catalog={1};Integrated Security=True;" providerName="System.Data.SqlClient" />-->
+  <add name="SqlServerData" connectionString="Data Source={0};Initial Catalog={1};Integrated Security=False;User Id={2};Password={3}" providerName="System.Data.SqlClient" />
+  
+  <add name="OracleData" connectionString="Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={3})(PORT={4})))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME={0})));User Id={1};Password={2};" providerName="Oracle.ManagedDataAccess.Client" />
+</connectionStrings>
+<!-- this is a test -->
