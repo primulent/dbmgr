@@ -11,8 +11,14 @@ namespace dbmgr.utilities
         [Option('d', "database_type", HelpText = "Set the database type; mssql = SQL Server", Default = "mssql")]
         public string DatabaseType { get; set; }
 
-        [Option('c', "connection_info", HelpText = "Connection string for the database type", SetName = "Connectivity")]
+        [Option('c', "connection_info", HelpText = "Connection info for the database type", SetName = "Connectivity")]
         public string ConnectInfo { get; set; }
+
+        [Option("cs", HelpText = "Connection string for the database type", SetName = "Connectivity")]
+        public string ConnectString { get; set; }
+
+        [Option("csf", HelpText = "Connection string file for the database type", SetName = "Connectivity")]
+        public string ConnectStringFile { get; set; }
 
         [Option('f', "file", HelpText = "File location for connection information", SetName = "Connectivity")]
         public string VaultFile { get; set; }
@@ -78,6 +84,10 @@ namespace dbmgr.utilities
                 yield return new Example($"{Environment.NewLine}String used to connect to the database; varies per database type", settings, new dbmgrCommandLineOptions { ConnectInfo = "database connection" });
 
                 yield return new Example($"{Environment.NewLine}Location of vault file containing information to connect to the database", settings, new dbmgrCommandLineOptions { VaultFile = "vault.txt" });
+
+                yield return new Example($"{Environment.NewLine}.NET Connection String used to connect to the database; varies per database type", settings, new dbmgrCommandLineOptions { ConnectString = "database connection string" });
+
+                yield return new Example($"{Environment.NewLine}Location of vault file containing .NET Connection string to connect to the database", settings, new dbmgrCommandLineOptions { ConnectStringFile = "vault.txt" });
 
                 yield return new Example($"{Environment.NewLine}Location of token file containing information to replace in the database scripts", settings, new dbmgrCommandLineOptions { ReplacementFile = "tokens.txt" });
 

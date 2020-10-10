@@ -67,6 +67,18 @@ dbmc -f <path_to_vault_file>
 dbmc -f vault.txt
 ```
 
+Use a fully specified .NET Connection String on the command line.
+```c#
+dbmc -cs <connection string>
+dbmc -cs "Data Source=(local);Initial Catalog=db;Integrated Security=true;MultipleActiveResultSets=True"
+```
+
+Use a fully specified .NET Connection String from a file.
+```c#
+dbmc -csf <connection string file>
+dbmc -csf vault_csf.txt
+```
+
 ## Development
 
 ### Initializing the basic project folder structure

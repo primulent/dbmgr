@@ -98,9 +98,25 @@ namespace dbmgr.utilities
                     }
                 }
 
+                // Step #3b - passed in connectionstring overrides everything
+                string netConnectionString = null;
+                if (!string.IsNullOrWhiteSpace(options.ConnectString))
+                {
+                    netConnectionString = options.ConnectString;
+                    Log.Logger.Information("Connection string override from command line");
+                } else if (!string.IsNullOrWhiteSpace(options.ConnectStringFile))
+                {
+                    string input = File.ReadAllText(options.ConnectStringFile);
+                    if (!string.IsNullOrWhiteSpace(input))
+                    {
+                        Log.Logger.Information("Connection string override from file");
+                        netConnectionString = input;
+                    }
+                }
+
                 // Set up the migrator
                 IDatabaseConfiguration config = new NetDatabaseConfiguration(_database.DbConnectionKey);
-                dbmgrDataMigration m = new dbmgrDataMigration(config, _destinationBase, _database, options.ReplacementFile, replacementParameters);
+                dbmgrDataMigration m = new dbmgrDataMigration(config, _destinationBase, _database, options.ReplacementFile, replacementParameters, netConnectionString);
                 if (options.DryRun)
                 {
                     Log.Logger.Information("Executing in DRY RUN mode.  No updates to database will take place.");

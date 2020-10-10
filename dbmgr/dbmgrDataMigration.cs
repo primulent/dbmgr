@@ -34,14 +34,21 @@ namespace dbmgr.utilities
         private readonly IDBScripts _database;
         private readonly Dictionary<string, string> _scriptReplacements = new Dictionary<string, string>();  // Holds tokens and replacement values for scripts
 
-        public dbmgrDataMigration(IDatabaseConfiguration config, string deployDirectory, IDBScripts database, string scriptReplacementsFile, string[] replacementParameters)
+        public dbmgrDataMigration(IDatabaseConfiguration config, string deployDirectory, IDBScripts database, string scriptReplacementsFile, string[] replacementParameters, string netConnectionString = null)
         {
             Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console().CreateLogger();
 
             // Setup data context information
             _database = database;
-            _connectionString = config.ConnectionString;
-            _connectionString = DataContext.GetConnectionString(_connectionString, replacementParameters);
+            if (netConnectionString != null)
+            {
+                _connectionString = netConnectionString;
+            }
+            else
+            {
+                _connectionString = config.ConnectionString;
+                _connectionString = DataContext.GetConnectionString(_connectionString, replacementParameters);
+            }
             _providerName = config.ConnectionProviderName;
             _defaultTimeout = config.DefaultCommandTimeoutSecs;
             _defaultTransTimeout = config.DefaultTransactionTimeoutMins;
