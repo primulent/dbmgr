@@ -54,57 +54,114 @@ namespace dbmgr.utilities
 
                 // Step #2 - get the connection parameters
                 string[] replacementParameters = null;
-                // Step #2a - from the vault file
-                if (!string.IsNullOrWhiteSpace(options.VaultFile))
+                string netConnectionString = null;
+
+                // Do we have standard parameters?
+                if (!string.IsNullOrWhiteSpace(options.DbName))
                 {
-                    // We have the database connection in the vault file
+                    // Handle our individual parameters
+                    replacementParameters = _database.ParseStandardConnection(  options.DbName,
+                                                                                options.DbServer,
+                                                                                options.DbPort,
+                                                                                options.DbUser,
+                                                                                options.DbPwd,
+                                                                                options.DbOpt1,
+                                                                                options.DbOpt2);
+                } else if (!string.IsNullOrWhiteSpace(options.DbFile))
+                {
+                    // Handle our database file
                     try
                     {
-                        string input = File.ReadAllText(options.VaultFile);
-                        Log.Logger.Information("Replacement parameters parsed from vault file");
-                        replacementParameters = _database.ParseConnection(input);
-                        if (replacementParameters == null)
+                        Log.Logger.Information("Loading standard parameters from file");
+                        string[] fileparams = File.ReadAllLines(options.DbFile);
+                        if (fileparams.Length >= 1) options.DbName = fileparams[0]; else options.DbName = null;
+                        if (fileparams.Length >= 2) options.DbServer = fileparams[1]; else options.DbServer = null;
+                        if (fileparams.Length >= 3) options.DbPort = fileparams[2]; else options.DbPort = null;
+                        if (fileparams.Length >= 4) options.DbUser = fileparams[3]; else options.DbUser = null;
+                        if (fileparams.Length >= 5) options.DbPwd = fileparams[4]; else options.DbPwd = null;
+                        if (fileparams.Length >= 6) options.DbOpt1 = fileparams[5]; else options.DbOpt1 = null;
+                        if (fileparams.Length >= 7) options.DbOpt2 = fileparams[6]; else options.DbOpt2 = null;
+                        if (string.IsNullOrWhiteSpace(options.DbName))
                         {
-                            Log.Logger.Information("Replacement parameters loaded from vault file");
-                            replacementParameters = File.ReadAllLines(options.VaultFile);
-                            int l = 1;
-                            foreach(string s in replacementParameters)
-                            {
-                                Log.Logger.Debug("Replacement parameter #{0}: {1}", l++, s);
-                            }
+                            Log.Logger.Error("Format of standard parameter file is incorrect");
+                            return EXIT_CODE_ARGUMENT_ERROR;
                         }
+
+                        replacementParameters = _database.ParseStandardConnection(options.DbName,
+                                                                                  options.DbServer,
+                                                                                  options.DbPort,
+                                                                                  options.DbUser,
+                                                                                  options.DbPwd,
+                                                                                  options.DbOpt1,
+                                                                                  options.DbOpt2);
                     }
                     catch (FileNotFoundException)
                     {
-                        Log.Logger.Error("Unable to find vault file: {0}.", options.VaultFile);
+                        Log.Logger.Error("Unable to find standard parameter file: {0}.", options.DbFile);
                         return EXIT_CODE_GENERAL_ERROR;
                     }
                     catch (Exception ex)
                     {
-                        Log.Logger.Error("Error loading vault file", ex);
+                        Log.Logger.Error("Error loading standard parameter file", ex);
                         return EXIT_CODE_GENERAL_ERROR;
                     }
                 }
 
-                // Step #2b - from the command line - will override vault file
-                if (!string.IsNullOrWhiteSpace(options.ConnectInfo))
+                // if we didn't have standard parameters, let's try provider-specific
+                if (replacementParameters == null)
                 {
-                    Log.Logger.Information("Replacement parameters parsed from command line");
-                    replacementParameters = _database.ParseConnection(options.ConnectInfo, options.DbName, options.DbServer, options.DbPort, options.DbUser, options.DbPwd);
-                    if (replacementParameters == null || replacementParameters.Count() == 0)
+                    // Do we have provider-specific connection info?
+                    if (!string.IsNullOrWhiteSpace(options.ConnectInfo))
                     {
-                        Log.Logger.Error("Unable to parse database replacement parameters");
-                        return EXIT_CODE_ARGUMENT_ERROR;
+                        // Handle the connect info
+                        Log.Logger.Information("Replacement parameters parsed from command line");
+                        replacementParameters = _database.ParseProviderConnection(options.ConnectInfo);
+                        if (replacementParameters == null || replacementParameters.Count() == 0)
+                        {
+                            Log.Logger.Error("Unable to parse database replacement parameters");
+                            return EXIT_CODE_ARGUMENT_ERROR;
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(options.ConnectInfoFile))
+                    {
+                        // We have the database connection in the vault file
+                        try
+                        {
+                            string input = File.ReadAllText(options.ConnectInfoFile);
+                            Log.Logger.Information("Connection info read from connection info file");
+                            replacementParameters = _database.ParseProviderConnection(input);
+                            if (replacementParameters == null)
+                            {
+                                // Try another file format where each provider specific item is on one line
+                                Log.Logger.Information("Replacement parameters loaded from vault file");
+                                replacementParameters = File.ReadAllLines(options.ConnectInfoFile);
+                                int l = 1;
+                                foreach (string s in replacementParameters)
+                                {
+                                    Log.Logger.Debug("Replacement parameter #{0}: {1}", l++, s);
+                                }
+                            }
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            Log.Logger.Error("Unable to find connection info file: {0}.", options.ConnectInfoFile);
+                            return EXIT_CODE_GENERAL_ERROR;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Logger.Error("Error loading connection info file", ex);
+                            return EXIT_CODE_GENERAL_ERROR;
+                        }                        
                     }
                 }
 
-                // Step #3b - passed in connectionstring overrides everything
-                string netConnectionString = null;
+                // Do we have a connection string already?                
                 if (!string.IsNullOrWhiteSpace(options.ConnectString))
                 {
                     netConnectionString = options.ConnectString;
                     Log.Logger.Information("Connection string override from command line");
-                } else if (!string.IsNullOrWhiteSpace(options.ConnectStringFile))
+                }
+                else if (!string.IsNullOrWhiteSpace(options.ConnectStringFile))
                 {
                     string input = File.ReadAllText(options.ConnectStringFile);
                     if (!string.IsNullOrWhiteSpace(input))

@@ -71,7 +71,7 @@ namespace Tests
         [TestMethod]
         public void TestCreateSchemaBadConnectionStringParameter()
         {
-            string[] args = new string[] { "-c", "something" };
+            string[] args = new string[] { "--ci", "something" };
             int result = dbmgrConsole.Main(args);
             Assert.AreEqual(result, dbmgrConsole.EXIT_CODE_ARGUMENT_ERROR);
         }
@@ -79,7 +79,7 @@ namespace Tests
         [TestMethod]
         public void TestCreateSchemaTooManyDelimitersConnectionStringParameter()
         {
-            string[] args = new string[] { "-c", "@@@something" };
+            string[] args = new string[] { "--ci", "@@@something" };
             int result = dbmgrConsole.Main(args);
             Assert.AreEqual(result, dbmgrConsole.EXIT_CODE_ARGUMENT_ERROR);
         }
@@ -87,9 +87,9 @@ namespace Tests
         [TestMethod]
         public void TestGoodSchemaDelimitersConnectionStringParameter()
         {
-            string[] args = new string[] { "-c", @"user:password@myServer\instanceName" };
+            string[] args = new string[] { "--ci", @"user:password@myServer\instanceName" };
             int result = dbmgrConsole.Main(args);
-            Assert.AreEqual(result, dbmgrConsole.EXIT_CODE_GENERAL_ERROR);
+            Assert.AreEqual(result, dbmgrConsole.EXIT_CODE_ARGUMENT_ERROR);
         }
 
         [TestMethod]

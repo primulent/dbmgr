@@ -12,7 +12,13 @@ namespace dbmgr.utilities.db
         public string ShortName { get { return "oracle"; } }
         public string DbConnectionKey { get { return "OracleData"; } }
 
-        public string[] ParseConnection(string args, string dbName = null, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null)
+        public string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null)
+        {
+            string[] parameters = null;
+            return parameters;
+        }
+
+        public string[] ParseProviderConnection(string args)
         {
             // format: user/password@sid:host/port
 

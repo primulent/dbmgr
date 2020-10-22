@@ -176,10 +176,13 @@
     </None>
     <Content Include="script-binary.ico" />
     <None Include="README.md" />
-    <Content Include="SampleConfiguration\vault.sample">
+    <Content Include="SampleConfiguration\vault_cif.sample">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Include="Properties\app.manifest" />
+    <Content Include="SampleConfiguration\vault_csf.sample">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">

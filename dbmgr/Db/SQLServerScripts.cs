@@ -11,11 +11,9 @@ namespace dbmgr.utilities.db
 
         public string DbConnectionKey { get { return "SqlServerData"; } }
 
-        public string[] ParseConnection(string args, string dbName = null, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null)
+        public string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null)
         {
-            // format: [user:password@]myServer\instanceName
-
-            bool integratedSecurity = false;
+            bool.TryParse(opt1, out bool integratedSecurity);
             string[] parameters = new string[5];
             parameters[0] = dbName;
             parameters[1] = dbServer;
@@ -25,7 +23,17 @@ namespace dbmgr.utilities.db
             if (!string.IsNullOrEmpty(dbUser))
             {
                 parameters[4] = "True";
-            }            
+            }
+
+            return parameters;
+        }
+
+        public string[] ParseProviderConnection(string args)
+        {
+            // format: [user:password@]myServer\instanceName
+
+            bool integratedSecurity = false;
+            string[] parameters = new string[5];
 
             string serverAndDatabase = null;
 

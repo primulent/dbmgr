@@ -24,7 +24,7 @@ namespace dbmgr.utilities.Tests
 
         private Mock<dbmgrDataMigration> GetMockDataMigration(SQLServerScripts ss)
         {
-            var mock = new Mock<dbmgrDataMigration>(GetMockConfiguration(ss.DbConnectionKey).Object, "Tests", ss, null, null);
+            var mock = new Mock<dbmgrDataMigration>(GetMockConfiguration(ss.DbConnectionKey).Object, "Tests", ss, null, null, null);
             return mock;
         }
 

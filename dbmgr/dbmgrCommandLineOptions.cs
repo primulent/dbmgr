@@ -7,22 +7,39 @@ namespace dbmgr.utilities
 {
     public class dbmgrCommandLineOptions
     {
-        // Options
+        // Connectivity Options
         [Option('d', "database_type", HelpText = "Set the database type; mssql = SQL Server", Default = "mssql")]
         public string DatabaseType { get; set; }
 
-        [Option('c', "connection_info", HelpText = "Connection info for the database type", SetName = "Connectivity")]
+        [Option("ci", HelpText = "Connection info for the database type", SetName = "Connectivity")]
         public string ConnectInfo { get; set; }
+        [Option("cif", HelpText = "File location for connection information", SetName = "Connectivity")]
+        public string ConnectInfoFile { get; set; }
 
         [Option("cs", HelpText = "Connection string for the database type", SetName = "Connectivity")]
         public string ConnectString { get; set; }
-
         [Option("csf", HelpText = "Connection string file for the database type", SetName = "Connectivity")]
         public string ConnectStringFile { get; set; }
 
-        [Option('f', "file", HelpText = "File location for connection information", SetName = "Connectivity")]
-        public string VaultFile { get; set; }
+        [Option("db", HelpText = "Collect the database name", SetName = "Connectivity")]
+        public string DbName { get; set; }
+        [Option("host", HelpText = "Collect the server host name for the database")]
+        public string DbServer { get; set; }
+        [Option("port", HelpText = "Collect the server port number for the database")]
+        public string DbPort { get; set; }
+        [Option("user", HelpText = "Collect the user name for the database")]
+        public string DbUser { get; set; }
+        [Option("pwd", HelpText = "Collect the password for the database")]
+        public string DbPwd { get; set; }
+        [Option("opt1", HelpText = "Collect the first optional parameter for the database provider")]
+        public string DbOpt1 { get; set; }
+        [Option("opt2", HelpText = "Collect the second optional parameter for the database provider")]
+        public string DbOpt2 { get; set; }
+        [Option("dbf", HelpText = "Standard database settings file for the database type", SetName = "Connectivity")]
+        public string DbFile { get; set; }
 
+
+        // Action Options
         [Option('r', "replacement_file", HelpText = "Token replacement file location")]
         public string ReplacementFile { get; set; }
 
@@ -35,13 +52,14 @@ namespace dbmgr.utilities
         [Option("green", HelpText = "Perform the green part of a blue-green deployment; this will run the green delta scripts and the post scripts")]
         public bool Green { get; set; }
 
-        // Commands
+        // System Commands
         [Option('s', "setup", HelpText = "Setup the database structure; create a \\Database directory with the appropriate subdirectories in the current folder")]
         public bool SetupFolders { get; set; }
 
         [Option('g', "generate", HelpText = "Generate delta script file with the associated comment in the .\\Database\\Deltas subdirectory")]
         public string GenerateDelta { get; set; }
 
+        // Database Commands
         [Option('t', "test", HelpText = "Test connectivity to the database")]
         public bool TestConnectivity { get; set; }
 
@@ -53,18 +71,6 @@ namespace dbmgr.utilities
 
         [Option('x', "extract", HelpText = "Extracts the current script files from the selected database")]
         public bool Extract { get; set; }
-
-        [Option('u', "user", HelpText = "Collect the user name for the database")]
-        public string DbUser { get; set; }
-        [Option('p', "pwd", HelpText = "Collect the password for the database")]
-        public string DbPwd { get; set; }
-
-        [Option("db", HelpText = "Collect the database name")]
-        public string DbName { get; set; }
-        [Option("host", HelpText = "Collect the server host name for the database")]
-        public string DbServer { get; set; }
-        [Option("port", HelpText = "Collect the server port number for the database")]
-        public string DbPort { get; set; }
 
 
         [Usage(ApplicationAlias = "dbmgr")]
@@ -83,7 +89,7 @@ namespace dbmgr.utilities
 
                 yield return new Example($"{Environment.NewLine}String used to connect to the database; varies per database type", settings, new dbmgrCommandLineOptions { ConnectInfo = "database connection" });
 
-                yield return new Example($"{Environment.NewLine}Location of vault file containing information to connect to the database", settings, new dbmgrCommandLineOptions { VaultFile = "vault.txt" });
+                yield return new Example($"{Environment.NewLine}Location of vault file containing information to connect to the database", settings, new dbmgrCommandLineOptions { ConnectInfoFile = "vault.txt" });
 
                 yield return new Example($"{Environment.NewLine}.NET Connection String used to connect to the database; varies per database type", settings, new dbmgrCommandLineOptions { ConnectString = "database connection string" });
 

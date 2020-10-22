@@ -47,24 +47,63 @@ Warning: You can no longer change history!
 
 ---
 
-## Installation and configuration
+# Getting Started
+
+## Installation
 
 Extract the binaries, dbmc into a directory.  Ensure the system PATH is set to this directory.
 
-To specify how to connect to the database, there are several options: 
+## Establish Connectivity
 
-Use the command line and specify the connection format as appropriate for the database provider.
+To specify how to connect to the database, select a database provider.
+
+In order to establish connectivity from there, there are several options: 
+* Standard parameters
+* Provider-specific format
+* Full Connection String
+
+We'll explain each below, so you can choose the method that works best for your needs.
+
+---
+
+To use the standard database connectivity parameters, use the command line and specify the individual parts of a standard connection string.  These will be interpreted by the database provider.
 ```c#
-dbmc -c <connection_format>
-dbmc -c (local)\database
+dbmc --db <database> --host <host> --port <port> --user <user> --pwd <password> --opt1 <provider parameter 1> --opt2 <provider parameter 2>
+dbmc --db Northwind --host (local) --user sa --pwd password --opt1 true
 ```
-SQL Server Format: [user:password@]myServer\instanceName
+SQL Server Provider format:
 
+_Data Source={\<host>};Initial Catalog={\<database>};Integrated Security={\<opt1>};User ID={\<user>};Password={\<password>}_
 
-Use a "vault" file and place your connection_format into a text file on the file system.
+To use the standard database format from a file instead of the command line, use a "vault" file.  Place your standard information into a text file on the file system and refer to it.
 ```c#
-dbmc -f <path_to_vault_file>
-dbmc -f vault.txt
+dbmc -dbf <path_to_vault_file>
+dbmc -dbf vault_dbf.txt
+```
+SQL Server Provider file format: 
+* \<database>
+* \<host>
+* \<port>
+* \<user>
+* \<password>
+* \<opt1>
+* \<opt2>
+
+Note: One line per item - leave a blank row for non-specified items.
+
+To use the provider-specific format, use the command line and specify the connection format as appropriate for the database provider.
+```c#
+dbmc -ci <connection_format>
+dbmc -ci (local)\database
+```
+SQL Server Provider Format: 
+
+_[user:password@]myServer\instanceName_
+
+To use a provider-specific format from a file instead of the command line, use a "vault" file.  Place your connection information into a text file on the file system and refer to it.
+```c#
+dbmc -cif <path_to_vault_file>
+dbmc -cif vault_cif.txt
 ```
 
 Use a fully specified .NET Connection String on the command line.
@@ -73,11 +112,19 @@ dbmc -cs <connection string>
 dbmc -cs "Data Source=(local);Initial Catalog=db;Integrated Security=true;MultipleActiveResultSets=True"
 ```
 
-Use a fully specified .NET Connection String from a file.
+To use a .NET connection string from a file instead of the command line, use a "vault" file.  Place your .NET connection string into a text file on the file system and refer to it.
 ```c#
 dbmc -csf <connection string file>
 dbmc -csf vault_csf.txt
 ```
+
+SQL Server Provider Note: 
+
+You must ensure your connectionstring specified _MultipleActiveResultSets=True_
+
+---
+
+That's it - you are now ready to use dbmgr!
 
 ## Development
 
@@ -121,11 +168,6 @@ Created like any SQL code file, with the following additional requirements:
 
 ## Deployment
 
-### Initializing the database tracking
-
-```c#
-dbmc -i
-```
 
 ### Deploying the database changes
 
@@ -134,6 +176,13 @@ dbmc -m
 ```
 
 ---
+
+### Initializing the database tracking
+
+```c#
+dbmc -i
+```
+
 
 ### Support for dry-runs
 You may run any migration to see what would happen with the --dry option.  Nothing in the database will be updated.

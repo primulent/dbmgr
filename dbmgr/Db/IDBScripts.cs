@@ -8,7 +8,9 @@ namespace dbmgr.utilities.db
 
         string DbConnectionKey { get; }
 
-        string[] ParseConnection(string args, string dbName = null, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null);
+        string[] ParseProviderConnection(string args);
+
+        string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null);
 
         void EnlistTransaction(DbConnection connection);
 
