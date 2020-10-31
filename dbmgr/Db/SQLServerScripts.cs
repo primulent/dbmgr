@@ -92,12 +92,12 @@ namespace dbmgr.utilities.db
 
         public string[] GetScriptDirectoryNames()
         {
-            return new string[] { "Other", "Synonyms", "Functions", "Views", "StoredProcedures", "Triggers" };
+            return new string[] { "Other", "Sequences", "Synonyms", "Functions", "Views", "StoredProcedures", "Triggers" };
         }
 
         public string[] GetScriptTypes()
         {
-            return new string[] { "'SO'", "'SN'", "'FN','TF','AF'", "'V'", "'P'", "'TR'" };
+            return new string[] { "'SO'", "'SQ'", "'SN'", "'FN','TF','AF'", "'V'", "'P'", "'TR'" };
         }
 
         /// <summary>

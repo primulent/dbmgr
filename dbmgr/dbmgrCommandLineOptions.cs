@@ -52,6 +52,10 @@ namespace dbmgr.utilities
         [Option("green", HelpText = "Perform the green part of a blue-green deployment; this will run the green delta scripts and the post scripts")]
         public bool Green { get; set; }
 
+        [Option("nocreate", HelpText = "Fail the deployment if the tracking tables do not exist")]
+        public bool NoCreate { get; set; }
+        
+
         // System Commands
         [Option('s', "setup", HelpText = "Setup the database structure; create a \\Database directory with the appropriate subdirectories in the current folder")]
         public bool SetupFolders { get; set; }

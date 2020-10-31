@@ -209,7 +209,7 @@ namespace dbmgr.utilities
                     try
                     {
                         // Validate and/or create the schema
-                        bool exists = ValidateAndCreateSchema(m);
+                        bool exists = ValidateAndCreateSchema(m, options.NoCreate);
                         if (!exists)
                         {
                             Log.Logger.Error("Cannot continue - unable to validate migration schema!");
@@ -374,17 +374,20 @@ namespace dbmgr.utilities
             }
         }
 
-        private static bool ValidateAndCreateSchema(dbmgrDataMigration m)
+        private static bool ValidateAndCreateSchema(dbmgrDataMigration m, bool noCreate)
         {
             Log.Logger.Information("Validating schema");
             bool exists = m.ValidateSchema();
             if (!exists)
             {
                 Stopwatch rt = new Stopwatch();
-                Log.Logger.Information("Creating schema");
+                if (!noCreate)
+                {
+                    Log.Logger.Information("Creating schema");
 
-                // This must succeed
-                exists = m.CreateSchema();
+                    // This must succeed
+                    exists = m.CreateSchema();
+                }
                 if (!exists)
                 {
                     Log.Logger.Error("Schema is invalid");
