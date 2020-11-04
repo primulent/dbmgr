@@ -166,6 +166,11 @@ namespace dbmgr.utilities
                         {
                             // Grab the name and content, and write the file
                             string name = idr.GetStringSafe(0);
+                            // Ensure the name of the file is reflective of a filename
+                            foreach (char c in Path.GetInvalidFileNameChars())
+                            {
+                                name = name.Replace(c, '_');
+                            }
                             string contents = idr.GetStringSafe(1);
                             Log.Logger.Debug("Found database object {0} ({1} bytes)", name, contents?.Length);
 
