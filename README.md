@@ -1,6 +1,6 @@
 ﻿# Overview
 
-dbmgr is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programability and data changes using direct SQL.
+dbmgr is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programmability and data changes using direct SQL.   More information on [the dbmgr website](http://www.dbmgr.net/).
 
 ## Benefits
 Makes database deployments consistent and reliable by ensuring your database always matches your application.
