@@ -147,11 +147,11 @@ namespace dbmgr.utilities.db
 
         public string GetExtractSQL(string type)
         {
-            return string.Format(@"select o.name, m.definition from sys.objects o inner join sys.sql_modules m on o.object_id = m.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
+            return string.Format(@"select o.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+o.name+''')) BEGIN'+CHAR(10)+'DROP '+ CASE WHEN o.type = 'P' THEN 'PROCEDURE' WHEN o.type = 'V' THEN 'VIEW' WHEN o.type = 'T' THEN 'TRIGGER' WHEN o.type = 'SN' THEN 'SYNONYM' WHEN o.type in ('FN', 'TF', 'AF') THEN 'FUNCTION' ELSE '<object type not supported>' END +' [' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + m.definition from sys.objects o inner join sys.sql_modules m on o.object_id = m.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
 union all select o.name, '-- CLR AGGREGATE FUNCTIONS NOT SUPPORTED' from sys.objects o inner join sys.assembly_modules a on o.object_id = a.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
 union all select o.name, '-- SERVICE BROKER QUEUES NOT SUPPORTED' from sys.objects o inner join sys.service_queues q on o.object_id = q.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
 union all select o.name, 'IF (SELECT OBJECT_ID(''' + s.name + ''')) IS NULL BEGIN CREATE SYNONYM ' + s.name + ' FOR ' + s.base_object_name + ' END' from sys.objects o inner join sys.synonyms s on o.object_id = s.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
-union all select o.name, 'CREATE SEQUENCE [' + o.name + '] AS [' + CAST(TYPE_NAME(e.user_type_id) AS VARCHAR(255)) + '] START WITH '+ CAST(e.current_value AS VARCHAR(255)) + ' INCREMENT BY ' + CAST(e.increment AS VARCHAR(255)) 
+union all select o.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+o.name+''')) BEGIN'+CHAR(10)+'DROP SEQUENCE [' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + 'CREATE SEQUENCE [' + o.name + '] AS [' + CAST(TYPE_NAME(e.user_type_id) AS VARCHAR(255)) + '] START WITH '+ CAST(e.current_value AS VARCHAR(255)) + ' INCREMENT BY ' + CAST(e.increment AS VARCHAR(255)) 
 + ' MINVALUE ' + CAST(e.minimum_value AS VARCHAR(255)) + ' MAXVALUE ' + CAST(e.maximum_value AS VARCHAR(255)) + CASE WHEN e.is_cached = 1 THEN ' CACHE' ELSE '' END + CASE WHEN e.is_cycling = 1 THEN ' CYCLE' ELSE '' END 
 from sys.objects o inner join sys.sequences e on o.object_id = e.object_id where o.is_ms_shipped = 0 AND o.type in ({0})", type);
         }
