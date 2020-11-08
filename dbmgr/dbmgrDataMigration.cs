@@ -36,8 +36,6 @@ namespace dbmgr.utilities
 
         public dbmgrDataMigration(IDatabaseConfiguration config, string deployDirectory, IDBScripts database, string scriptReplacementsFile, string[] replacementParameters, string netConnectionString = null)
         {
-            Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console().CreateLogger();
-
             // Setup data context information
             _database = database;
             if (netConnectionString != null)
@@ -112,6 +110,7 @@ namespace dbmgr.utilities
 
         public bool HaveConnectivity()
         {
+            Log.Logger.Information("Testing connectivity...");
             using (DataContext dataContext = GetDataContext())
             {
                 try
@@ -119,9 +118,9 @@ namespace dbmgr.utilities
                     dataContext.ExecuteScalar(_database.GetTestConnectionSQL());
                     return true;
                 }
-                catch
+                catch(Exception ex)
                 {
-                    // ignore
+                    Log.Logger.Error(ex, "Unable to connect");
                 }
             }
 

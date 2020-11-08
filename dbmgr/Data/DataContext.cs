@@ -315,7 +315,7 @@ namespace dbmgr.utilities.data
                     }
                 }
 
-                Log.Logger.Warning("SQL Exception [" + sb.ToString() + "] " + ex.ToString());
+                Log.Logger.Debug("SQL Exception [" + sb.ToString() + "] " + ex.ToString());
 
                 throw;
             }

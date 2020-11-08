@@ -33,7 +33,6 @@ namespace dbmgr.utilities
         {
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.AppSettings()
-                .WriteTo.Console()
                 .CreateLogger();
 
             var parser = Parser.Default;
