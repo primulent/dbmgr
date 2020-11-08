@@ -15,8 +15,8 @@ namespace dbmgr.utilities.db
         {
             bool.TryParse(opt1, out bool integratedSecurity);
             string[] parameters = new string[5];
-            parameters[0] = dbName;
-            parameters[1] = dbServer;
+            parameters[0] = dbServer;
+            parameters[1] = dbName;
             parameters[2] = dbUser;
             parameters[3] = dbPwd;
             parameters[4] = integratedSecurity.ToString();

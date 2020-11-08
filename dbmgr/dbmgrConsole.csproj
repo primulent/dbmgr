@@ -161,6 +161,7 @@
     </None>
     <EmbeddedResource Include="Resources\template.down" />
     <EmbeddedResource Include="Resources\template.up" />
+    <None Include="TUTORIAL.md" />
     <None Include="SampleConfiguration\connectionStrings.local.sample">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <SubType>Designer</SubType>
