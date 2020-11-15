@@ -1,4 +1,7 @@
-﻿using System.Data.Common;
+﻿using dbmgr.utilities.data;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 
 namespace dbmgr.utilities.db
 {
@@ -38,6 +41,8 @@ namespace dbmgr.utilities.db
         /// SQL that will be used to extract for each ScriptType passed in.
         /// </summary>
         string GetExtractSQL(string type);
+
+        List<string> GetExtractSchema(DataContext dataContext);
 
         /// <summary>
         /// SQL that will be used to determine the dependencies for a given current script

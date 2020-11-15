@@ -195,9 +195,9 @@ For SQL Server, the naming convention and order of scripts are as follows:
 
 If you want to extract the current database code into source files, use the extract feature of dbmgr.
 
-To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract command.
+To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract Current command.
 ```c#
-dbmgr -x
+dbmgr -xc
 ```
 
 dbmgr will place all of the code of your database in the proper locations with the proper naming convention.  Any issues reverse engineering will be displayed in the logs.

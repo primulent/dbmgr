@@ -127,7 +127,35 @@ namespace dbmgr.utilities
             return false;
         }
 
-        public bool Extract()
+        public bool ExtractSchema()
+        {
+            // Create the directory if it doesn't exist
+            if (!Directory.Exists(_migrationScriptLocation))
+            {
+                Directory.CreateDirectory(_migrationScriptLocation);
+                Log.Logger.Debug("Created Directory " + _migrationScriptLocation);
+            }
+
+            using (DataContext dataContext = GetDataContext())
+            {
+                int counter = 0;
+                List<string> schema = _database.GetExtractSchema(dataContext);
+                foreach(string contents in schema )
+                {
+                    if (!string.IsNullOrWhiteSpace(contents))
+                    {
+                        string filename = CreateScriptFile("baseline_schema_" + counter++, false) + ".up";
+                        filename = Path.Combine(_migrationScriptLocation, filename);
+                        Log.Logger.Debug("Extracting schema to {0}", filename);
+                        File.WriteAllText(filename, contents);
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public bool ExtractCurrent()
         {
             // Validate the provider is set up correctly.
             string[] directoryNames = _database.GetScriptDirectoryNames();
@@ -165,55 +193,61 @@ namespace dbmgr.utilities
                         {
                             // Grab the name and content, and write the file
                             string name = idr.GetStringSafe(0);
-                            // Ensure the name of the file is reflective of a filename
-                            foreach (char c in Path.GetInvalidFileNameChars())
-                            {
-                                name = name.Replace(c, '_');
-                            }
                             string contents = idr.GetStringSafe(1);
-                            Log.Logger.Debug("Found database object {0} ({1} bytes)", name, contents?.Length);
-
-                            if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(contents))
-                            {
-                                StringBuilder injectDependencies = new StringBuilder();
-                                string dependencySql = _database.GetDependenciesSQL(name);
-                                using (IDataReader ddr = dataContext.ExecuteReader(dependencySql))
-                                {
-                                    while (ddr.Read())
-                                    {
-                                        string dependency = ddr.GetStringSafe(2);
-                                        string dependency_type = ddr.GetStringSafe(0);
-                                        string prefix = _database.GetFileNamePrefix(dependency_type);
-                                        if (prefix == null)
-                                        {
-                                            Log.Logger.Warning("Unsupported dependency type detected! Please manually review dependency for {0} of type {1}", dependency, dependency_type);
-                                            prefix = "";
-                                        }
-
-                                        injectDependencies.Append("--{{");
-                                        injectDependencies.Append(prefix + dependency);
-                                        injectDependencies.Append("}}");
-                                        injectDependencies.Append(Environment.NewLine);
-                                        Log.Logger.Information("Found dependency to {0}", dependency);
-                                    }
-                                }
-                                if (injectDependencies.Length > 0)
-                                {
-                                    injectDependencies.Append(contents);
-                                    contents = injectDependencies.ToString();
-                                }
-
-                                string file = String.Concat(_database.GetFileNamePrefix(extractTypes[i]), name, _database.GetFileNameExtension());
-                                string filename = Path.Combine(path, file);
-                                WriteTextToFile(filename, contents.Trim());
-                                Log.Logger.Information("Writing database object to {0}", filename);
-                            }
+                            ExtractToFile(dataContext, extractTypes[i], path, name, contents);
                         }
                     }
                 }
             }
 
-            return false;
+            return true;
+        }
+
+        private void ExtractToFile(DataContext dataContext, string extractType, string path, string name, string contents)
+        {
+            Log.Logger.Debug("Found database object {0} ({1} bytes)", name, contents?.Length);
+
+            if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(contents))
+            {
+                StringBuilder injectDependencies = new StringBuilder();
+                string dependencySql = _database.GetDependenciesSQL(name);
+                using (IDataReader ddr = dataContext.ExecuteReader(dependencySql))
+                {
+                    while (ddr.Read())
+                    {
+                        string dependency = ddr.GetStringSafe(2);
+                        string dependency_type = ddr.GetStringSafe(0);
+                        string prefix = _database.GetFileNamePrefix(dependency_type);
+                        if (prefix == null)
+                        {
+                            Log.Logger.Warning("Unsupported dependency type detected! Please manually review dependency for {0} of type {1}", dependency, dependency_type);
+                            prefix = "";
+                        }
+
+                        injectDependencies.Append("--{{");
+                        injectDependencies.Append(prefix + dependency);
+                        injectDependencies.Append("}}");
+                        injectDependencies.Append(Environment.NewLine);
+                        Log.Logger.Information("Found dependency to {0}", dependency);
+                    }
+                }
+                if (injectDependencies.Length > 0)
+                {
+                    injectDependencies.Append(contents);
+                    contents = injectDependencies.ToString();
+                }
+
+                // Ensure the name of the file is reflective of a filename
+                foreach (char c in Path.GetInvalidFileNameChars())
+                {
+                    name = name.Replace(c, '_');
+                }
+
+                string file = String.Concat(_database.GetFileNamePrefix(extractType), name, _database.GetFileNameExtension());
+                string filename = Path.Combine(path, file);
+                WriteTextToFile(filename, contents.Trim());
+                Log.Logger.Information("Writing database object to {0}", filename);
+            }
         }
 
         public bool ValidateSchema()

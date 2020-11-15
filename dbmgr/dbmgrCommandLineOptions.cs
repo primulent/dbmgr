@@ -73,8 +73,11 @@ namespace dbmgr.utilities
         [Option('m', "migrate", HelpText = "Run the current migration against the specified database.")]
         public bool Migrate { get; set; }
 
-        [Option('x', "extract", HelpText = "Extracts the current script files from the selected database")]
-        public bool Extract { get; set; }
+        [Option("xc", HelpText = "Extracts the current script files from the selected database")]
+        public bool ExtractCurrent { get; set; }
+
+        [Option("xs", HelpText = "Extracts the schema from the selected database")]
+        public bool ExtractSchema { get; set; }
 
 
         [Usage(ApplicationAlias = "dbmgr")]

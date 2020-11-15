@@ -130,14 +130,22 @@ namespace dbmgr.utilities.common
         }
 
 
-        public static Dictionary<string, int> TopSort(Dictionary<string, List<string>> dependencies)
+        public static Dictionary<string, int> TopSort(Dictionary<string, List<string>> dependencies, bool breakCycles = false)
         {
             Dictionary<string, int> newOrder = new Dictionary<string, int>();
 
+            
             int order = 0;
             while (dependencies?.Count > 0)
             {
+                int breaker = 0;
                 List<string> noDeps = dependencies.Where(n => n.Value.Count == 0).Select(n => n.Key).ToList();
+                while (breakCycles && noDeps.Count == 0 && breaker < 20)
+                {
+                    breaker++;
+                    noDeps = dependencies.Where(n => n.Value.Count == breaker).Select(n => n.Key).ToList();
+                }
+
                 if (noDeps.Count == 0)
                 {
                     foreach (string k in dependencies.Keys)

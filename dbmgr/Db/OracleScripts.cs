@@ -1,6 +1,8 @@
-﻿using Oracle.ManagedDataAccess.Client;
+﻿using dbmgr.utilities.data;
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Transactions;
@@ -75,10 +77,16 @@ namespace dbmgr.utilities.db
             return GetScriptTypes().Where(n => n == type).FirstOrDefault();
         }
 
+        public List<string> GetExtractSchema(DataContext dataContext)
+        {
+            throw new NotImplementedException("Feature not available in Oracle");
+        }
+
         public string GetExtractSQL(string type)
         {
             throw new NotImplementedException("Feature not available in Oracle");
         }
+
 
         public string GetDependenciesSQL(string name)
         {

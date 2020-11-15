@@ -197,9 +197,14 @@ namespace dbmgr.utilities
                     return ProcessConnectCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
                 }
 
-                if (options.Extract)
+                if (options.ExtractCurrent)
                 {
-                    return ProcessExtractCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
+                    return ProcessExtractCurrentCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
+                }
+
+                if (options.ExtractSchema)
+                {
+                    return ProcessExtractSchemaCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
                 }
 
                 // Run the migration
@@ -338,9 +343,13 @@ namespace dbmgr.utilities
             return m.HaveConnectivity();
         }
 
-        private static bool ProcessExtractCommand(dbmgrDataMigration m)
+        private static bool ProcessExtractCurrentCommand(dbmgrDataMigration m)
         {
-            return m.Extract();
+            return m.ExtractCurrent();
+        }
+        private static bool ProcessExtractSchemaCommand(dbmgrDataMigration m)
+        {
+            return m.ExtractSchema();
         }
 
         private static bool ProcessSetupCommand(dbmgrDataMigration m, bool isBlueGreen)
