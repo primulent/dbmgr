@@ -153,13 +153,16 @@ namespace dbmgr.utilities.db
 
         public List<string> GetExtractSchema(DataContext dataContext)
         {
-            StringBuilder tb_sql = new StringBuilder();            
-            StringBuilder fk_sql = new StringBuilder();
-            StringBuilder idx_sql = new StringBuilder();
-            StringBuilder desc_sql = new StringBuilder();
-            StringBuilder dep_sql = new StringBuilder();
+            StringBuilder tb_sql = new StringBuilder(10240);
+            List<string> exp_dependencies = new List<string>();
+            StringBuilder fk_sql = new StringBuilder(10240);
+            StringBuilder idx_sql = new StringBuilder(10240);
+            StringBuilder desc_sql = new StringBuilder(10240);
+            List<string> dep_dependencies = new List<string>();
+            StringBuilder dep_sql = new StringBuilder(10240);
 
             // Grab the list of tables
+            Log.Logger.Information("Grabbing the tables and dependencies...");
             string depSql = @"select DISTINCT OBJECT_NAME(t.object_id) as tablename, object_name(sic.referenced_object_id) as references_table
 from sys.schemas s
 inner join sys.tables t on s.schema_id = t.schema_id and s.name = '{0}' and t.type = 'U'
@@ -179,45 +182,50 @@ order by tablename";
                     {
                         dependencies = new List<string>();
                         table_with_dependencies.Add(t_name, dependencies);
-                        table_n = t_name;                        
+                        table_n = t_name;
                     }
 
                     if (d_name != null)
                     {
                         dependencies.Add(d_name);
-                    }                    
+                    }
                 }
             }
 
             // Order the tables
+            Log.Logger.Information("Ordering the {0} table dependencies...", table_with_dependencies.Count);
             Dictionary<string, int> sorted_tables_with_dependencies = CommonUtilities.TopSort(table_with_dependencies, true);
 
             // Loop through each table
             foreach (string table_name in sorted_tables_with_dependencies.OrderByDescending(n => n.Value).ThenBy(n => n.Key).Select(n => n.Key))
             {
+                Log.Logger.Information("Processing table {0} ...", table_name);
                 // Create the table
                 tb_sql.Append("CREATE TABLE [");
                 tb_sql.Append(table_name);
                 tb_sql.AppendLine("] (");
 
                 // Grab columns
-                string columnsSql = @"select sc.Name, st.name + ' ' + 
-case when st.Name in ('varchar', 'char', 'varbinary', 'binary') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length as varchar) END + ') ' else '' end +
-case when st.Name in ('nvarchar', 'nchar') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length/2 as varchar) END + ') ' else '' end +
-case when st.Name in ('numeric', 'decimal', 'float') then '(' + cast(sc.precision as varchar(20)) + CASE WHEN sc.scale > 0 THEN ',' + cast(sc.scale as varchar(20)) + ')' else ')' END else '' end +
+                string columnsSql = @"select sc.Name, 
+case when scc.definition IS NULL THEN st.name + ' ' ELSE '' END + 
+case when scc.definition IS NULL AND st.Name in ('varchar', 'char', 'varbinary', 'binary') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length as varchar) END + ') ' else '' end +
+case when scc.definition IS NULL AND st.Name in ('nvarchar', 'nchar') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length/2 as varchar) END + ') ' else '' end +
+case when scc.definition IS NULL AND st.Name in ('numeric', 'decimal', 'float') then '(' + cast(sc.precision as varchar(20)) + CASE WHEN sc.scale > 0 THEN ',' + cast(sc.scale as varchar(20)) + ')' else ')' END else '' end +
+case when scc.definition IS NOT NULL THEN ' AS ' + scc.definition ELSE '' END +
 CASE WHEN sc.collation_name IS NOT NULL THEN ' COLLATE ' + sc.collation_name ELSE ''  END +
 case when sc.is_rowguidcol = 1 THEN ' ROWGUIDCOL' ELSE '' END +
-case when sc.is_nullable = 1 then ' ' else ' NOT NULL' end + 
-case when sm.definition IS NOT NULL AND sed.referencing_id IS NULL then ' CONSTRAINT [' + OBJECT_NAME(sc.default_object_id) + '] DEFAULT ' +  OBJECT_DEFINITION(sc.default_object_id) else '' END +
-case when cc.definition IS NOT NULL then ' CONSTRAINT [' + cc.name + '] CHECK ' + cc.definition ELSE '' END +
+case when scc.definition IS NULL AND sc.is_nullable = 0 then ' NOT NULL' else '' end + 
+case when scc.definition IS NULL AND sm.definition IS NOT NULL AND sed.referencing_id IS NULL then ' CONSTRAINT [' + OBJECT_NAME(sc.default_object_id) + '] DEFAULT ' +  OBJECT_DEFINITION(sc.default_object_id) else '' END +
+case when scc.definition IS NULL AND cc.definition IS NOT NULL then ' CONSTRAINT [' + cc.name + '] CHECK ' + cc.definition ELSE '' END +
 CASE WHEN sc.is_identity = 1 THEN ' IDENTITY(' + CAST(IDENTITYPROPERTY(sc.object_id, 'SeedValue') AS VARCHAR(5)) + ',' + CAST(IDENTITYPROPERTY(sc.object_id, 'IncrementValue') AS VARCHAR(5)) + ')'   ELSE ''   END + 
-'' as script
+'' as script, sc.is_computed
 from sys.objects so
 inner join sys.columns sc on sc.object_id = so.object_id
 inner join sys.types st on st.user_type_id = sc.user_type_id
 LEFT JOIN sys.default_constraints sm ON sm.object_id = sc.default_object_id
 LEFT JOIN sys.sql_expression_dependencies sed ON sm.object_id = sed.referencing_id
 LEFT JOIN sys.check_constraints cc ON sc.object_id = cc.parent_object_id AND cc.parent_column_id = sc.column_id 
+LEFT JOIN sys.computed_columns scc on sc.object_id = sc.object_id and sc.column_id = scc.column_id and sc.is_computed = 1
 WHERE so.type = 'U'
 and so.object_id = OBJECT_ID(N'{0}')
 order by sc.column_id";
@@ -228,6 +236,7 @@ order by sc.column_id";
                     {
                         string column_name = cidr.GetStringSafe(0);
                         string column_def = cidr.GetStringSafe(1);
+                        bool is_computed = cidr.GetBoolean(2);
 
                         if (counter++ > 0)
                         {
@@ -237,10 +246,16 @@ order by sc.column_id";
                         tb_sql.Append(column_name);
                         tb_sql.Append("] ");
                         tb_sql.Append(column_def);
+
+                        if (is_computed)
+                        {
+                            exp_dependencies.Add(table_name);
+                        }
                     }
                 }
 
                 // Add the primary key and unique constraints
+                Log.Logger.Debug("Adding Primary Key for table {0} ...", table_name);
                 string primaryKeySql = @"select si.name, case when is_primary_key = 1 then 'PRIMARY KEY ' + si.type_desc else 'UNIQUE' end, COL_NAME(sic.[object_id], sic.column_id)  -- 'CONSTRAINT [' + si.name + '] PRIMARY KEY ' + si.type_desc + ' ([BudgetTemplateId])'
 from sys.indexes si 
 inner join sys.index_columns sic on si.object_id = sic.object_id and si.index_id = sic.index_id
@@ -298,6 +313,7 @@ order by key_ordinal";
                 tb_sql.AppendLine("");
 
                 // Add the DEFAULTS dependent on expressions
+                Log.Logger.Debug("Adding Defaults for table {0} ...", table_name);
                 string depfunSql = @"select OBJECT_DEFINITION(sc.default_object_id), sc.name, sm.name
 from sys.objects so
 inner join sys.columns sc on sc.object_id = so.object_id
@@ -316,6 +332,8 @@ order by so.name, sc.column_id";
                         string col_name = cidr.GetStringSafe(1);
                         string constraint_name = cidr.GetStringSafe(2);
 
+                        dep_dependencies.Add(constraint_name);
+
                         dep_sql.Append("ALTER TABLE [");
                         dep_sql.Append(table_name);
                         dep_sql.Append("] ADD CONSTRAINT [");
@@ -332,6 +350,7 @@ order by so.name, sc.column_id";
                 }
 
                 // Add the FOREIGN KEY constraints
+                Log.Logger.Debug("Adding Foreign Keys for table {0} ...", table_name);
                 string foreignKeySql = @"select si.name as constraint_name, 
 COL_NAME(sic.parent_object_id, sic.parent_column_id) as fk_contents, 
 object_name(sic.referenced_object_id) as references_table,
@@ -382,7 +401,7 @@ order by constraint_name";
 
                         string references_contents = cidr.GetStringSafe(3);
                         cascade_desc = cidr.GetStringSafe(4);
-                        
+
                         fk_contents = cidr.GetStringSafe(1);
                         references_table = cidr.GetStringSafe(2);
 
@@ -415,6 +434,7 @@ order by constraint_name";
                 }
 
                 // Add the INDEXES
+                Log.Logger.Debug("Adding Indexes for table {0} ...", table_name);
                 string indexSql = @"select i.name, object_name(ic.object_id), COL_NAME(ic.object_id, ic.column_id), i.filter_definition, CASE when i.is_unique = 1 THEN 'UNIQUE ' ELSE '' END + i.type_desc + ' INDEX', ic.is_descending_key, ic.is_included_column
 from sys.tables t
 inner join sys.indexes i on t.object_id = i.object_id and i.is_primary_key = 0 and i.is_unique_constraint = 0
@@ -433,7 +453,7 @@ order by ic.index_id, ic.key_ordinal";
                     string type_name = null;
                     bool is_included = false;
                     bool is_descending = false;
-                    
+
                     while (cidr.Read())
                     {
                         idx_name = cidr.GetStringSafe(0);
@@ -449,7 +469,7 @@ order by ic.index_id, ic.key_ordinal";
                             idx_sql.Append(references_table);
                             idx_sql.Append("] (");
                             idx_sql.Append(string.Join(",", key_columns));
-                            
+
                             if (!string.IsNullOrWhiteSpace(filter_def))
                             {
                                 idx_sql.Append(") WHERE (");
@@ -473,9 +493,9 @@ order by ic.index_id, ic.key_ordinal";
                         filter_def = cidr.GetStringSafe(3);
                         type_name = cidr.GetStringSafe(4);
                         is_descending = cidr.GetBoolean(5);
-                        is_included = cidr.GetBoolean(6);                        
+                        is_included = cidr.GetBoolean(6);
 
-                        string references_contents = string.Concat("[", cidr.GetStringSafe(2),"]");
+                        string references_contents = string.Concat("[", cidr.GetStringSafe(2), "]");
                         if (is_descending)
                         {
                             references_contents += " DESC";
@@ -488,7 +508,7 @@ order by ic.index_id, ic.key_ordinal";
                         else
                         {
                             key_columns.Add(references_contents);
-                        }                                                
+                        }
 
                         old_idx_name = idx_name;
                     }
@@ -524,6 +544,7 @@ order by ic.index_id, ic.key_ordinal";
                 }
 
                 // Add the DESCRIPTIONS
+                Log.Logger.Debug("Adding Descriptions for table {0} ...", table_name);
                 string commentSQL = @"select ep.value as ddescription, SCHEMA_NAME(so.schema_id) as dschema, so.name as dtable, COL_NAME(so.object_id, ep.minor_id) as dcolumn 
 from sys.extended_properties ep 
 left join sys.objects so on ep.major_id = so.object_id
@@ -559,30 +580,64 @@ where ep.name = 'MS_Description' and ep.major_id = OBJECT_ID(N'{0}')";
                 }
             }
 
+            Log.Logger.Information("Done Processing All Tables.");
+
             // Build the full script
             StringBuilder sql = new StringBuilder();
+
+            // Place any dependencies for the table scripts here
+            sql.AppendLine("--------------------------------------------");
+            sql.AppendLine("------------ Tables Dependencies------------");
+            sql.AppendLine("--------------------------------------------");
+            foreach (string table_name in exp_dependencies)
+            {
+
+            }
+
             sql.AppendLine("------------------------------------");
             sql.AppendLine("------------ Add Tables ------------");
             sql.AppendLine("------------------------------------");
             sql.Append(tb_sql);
-            sql.AppendLine("-----------------------------------------------------------");
-            sql.AppendLine("------------ Add Table and Column Descriptions ------------");
-            sql.AppendLine("-----------------------------------------------------------");
-            sql.Append(desc_sql);
-            sql.AppendLine("------------------------------------------");
-            sql.AppendLine("------------ Add Foreign Keys ------------");
-            sql.AppendLine("------------------------------------------");
-            sql.Append(fk_sql);
-            sql.AppendLine("-------------------------------------");
-            sql.AppendLine("------------ Add Indexes ------------");
-            sql.AppendLine("-------------------------------------");
-            sql.Append(idx_sql);
+            if (desc_sql.Length > 0)
+            {
+                sql.AppendLine("-----------------------------------------------------------");
+                sql.AppendLine("------------ Add Table and Column Descriptions ------------");
+                sql.AppendLine("-----------------------------------------------------------");
+                sql.Append(desc_sql);
+            }
+            if (fk_sql.Length > 0)
+            {
+                sql.AppendLine("------------------------------------------");
+                sql.AppendLine("------------ Add Foreign Keys ------------");
+                sql.AppendLine("------------------------------------------");
+                sql.Append(fk_sql);
+            }
+            if (idx_sql.Length > 0)
+            {
+                sql.AppendLine("-------------------------------------");
+                sql.AppendLine("------------ Add Indexes ------------");
+                sql.AppendLine("-------------------------------------");
+                sql.Append(idx_sql);
+            }
 
-            dep_sql.Insert(0, "---------------------------------------------------------------\n");
-            dep_sql.Insert(0, "------------ Add Defaults Dependent on Expressions ------------\n");
-            dep_sql.Insert(0, "---------------------------------------------------------------\n");
-            sql.Append(dep_sql);
-            return new List<string>() { sql.ToString(), dep_sql.ToString() };
+            StringBuilder full_dep_sql = new StringBuilder();
+            if (dep_sql.Length > 0)
+            {                
+                full_dep_sql.AppendLine("--------------------------------------------");
+                full_dep_sql.AppendLine("------------ Tables Dependencies------------");
+                full_dep_sql.AppendLine("--------------------------------------------");
+                foreach (string constraint_name in dep_dependencies)
+                {
+
+                }
+                
+                full_dep_sql.Append("---------------------------------------------------------------\n");
+                full_dep_sql.Append("------------ Add Defaults Dependent on Expressions ------------\n");
+                full_dep_sql.Append("---------------------------------------------------------------\n");
+
+                full_dep_sql.Append(dep_sql);
+            }
+            return new List<string>() { sql.ToString(), full_dep_sql.ToString() };
         }
 
         public string GetExtractSQL(string type)
