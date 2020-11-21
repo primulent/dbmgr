@@ -121,7 +121,7 @@ namespace dbmgr.utilities.common
                     }
                 }
             }
-            catch (Exception)
+            catch
             {
                 totalLength = 0;
             }

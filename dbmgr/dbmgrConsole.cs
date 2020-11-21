@@ -202,9 +202,9 @@ namespace dbmgr.utilities
                     return ProcessExtractCurrentCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
                 }
 
-                if (options.ExtractSchema)
+                if (!string.IsNullOrWhiteSpace(options.ExtractSchema))
                 {
-                    return ProcessExtractSchemaCommand(m) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
+                    return ProcessExtractSchemaCommand(m, options.ExtractSchema) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
                 }
 
                 // Run the migration
@@ -347,9 +347,9 @@ namespace dbmgr.utilities
         {
             return m.ExtractCurrent();
         }
-        private static bool ProcessExtractSchemaCommand(dbmgrDataMigration m)
+        private static bool ProcessExtractSchemaCommand(dbmgrDataMigration m, string schema_name)
         {
-            return m.ExtractSchema();
+            return m.ExtractSchema(schema_name);
         }
 
         private static bool ProcessSetupCommand(dbmgrDataMigration m, bool isBlueGreen)

@@ -77,7 +77,7 @@ namespace dbmgr.utilities
         public bool ExtractCurrent { get; set; }
 
         [Option("xs", HelpText = "Extracts the schema from the selected database")]
-        public bool ExtractSchema { get; set; }
+        public string ExtractSchema { get; set; }
 
 
         [Usage(ApplicationAlias = "dbmgr")]

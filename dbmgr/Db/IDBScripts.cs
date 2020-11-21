@@ -42,7 +42,7 @@ namespace dbmgr.utilities.db
         /// </summary>
         string GetExtractSQL(string type);
 
-        List<string> GetExtractSchema(DataContext dataContext);
+        List<string> GetExtractSchema(DataContext dataContext, string schema_name);
 
         /// <summary>
         /// SQL that will be used to determine the dependencies for a given current script

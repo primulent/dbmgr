@@ -151,453 +151,49 @@ namespace dbmgr.utilities.db
             return prefix;
         }
 
-        public List<string> GetExtractSchema(DataContext dataContext)
+        public List<string> GetExtractSchema(DataContext dataContext, string schema_name)
         {
-            StringBuilder tb_sql = new StringBuilder(10240);
-            List<string> exp_dependencies = new List<string>();
+            StringBuilder tb_sql = new StringBuilder(10240);            
             StringBuilder fk_sql = new StringBuilder(10240);
             StringBuilder idx_sql = new StringBuilder(10240);
             StringBuilder desc_sql = new StringBuilder(10240);
-            List<string> dep_dependencies = new List<string>();
-            StringBuilder dep_sql = new StringBuilder(10240);
+
+            List<string> ext_dependencies = new List<string>();
 
             // Grab the list of tables
-            Log.Logger.Information("Grabbing the tables and dependencies...");
-            string depSql = @"select DISTINCT OBJECT_NAME(t.object_id) as tablename, object_name(sic.referenced_object_id) as references_table
-from sys.schemas s
-inner join sys.tables t on s.schema_id = t.schema_id and s.name = '{0}' and t.type = 'U'
-left join sys.foreign_keys si  on t.object_id = si.parent_object_id
-left join sys.foreign_key_columns sic on si.object_id = sic.constraint_object_id
-order by tablename";
-            Dictionary<string, List<string>> table_with_dependencies = new Dictionary<string, List<string>>();
-            using (IDataReader idr = dataContext.ExecuteReader(string.Format(depSql, "dbo")))
-            {
-                string table_n = null;
-                List<string> dependencies = null;
-                while (idr.Read())
-                {
-                    string t_name = idr.GetStringSafe(0);
-                    string d_name = idr.GetStringSafe(1);
-                    if (table_n == null || table_n != t_name)
-                    {
-                        dependencies = new List<string>();
-                        table_with_dependencies.Add(t_name, dependencies);
-                        table_n = t_name;
-                    }
-
-                    if (d_name != null)
-                    {
-                        dependencies.Add(d_name);
-                    }
-                }
-            }
-
-            // Order the tables
-            Log.Logger.Information("Ordering the {0} table dependencies...", table_with_dependencies.Count);
-            Dictionary<string, int> sorted_tables_with_dependencies = CommonUtilities.TopSort(table_with_dependencies, true);
+            Dictionary<string, int> sorted_tables_with_dependencies = GetTablesInOrder(dataContext, schema_name);
 
             // Loop through each table
             foreach (string table_name in sorted_tables_with_dependencies.OrderByDescending(n => n.Value).ThenBy(n => n.Key).Select(n => n.Key))
             {
                 Log.Logger.Information("Processing table {0} ...", table_name);
-                // Create the table
-                tb_sql.Append("CREATE TABLE [");
-                tb_sql.Append(table_name);
-                tb_sql.AppendLine("] (");
-
-                // Grab columns
-                string columnsSql = @"select sc.Name, 
-case when scc.definition IS NULL THEN st.name + ' ' ELSE '' END + 
-case when scc.definition IS NULL AND st.Name in ('varchar', 'char', 'varbinary', 'binary') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length as varchar) END + ') ' else '' end +
-case when scc.definition IS NULL AND st.Name in ('nvarchar', 'nchar') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length/2 as varchar) END + ') ' else '' end +
-case when scc.definition IS NULL AND st.Name in ('numeric', 'decimal', 'float') then '(' + cast(sc.precision as varchar(20)) + CASE WHEN sc.scale > 0 THEN ',' + cast(sc.scale as varchar(20)) + ')' else ')' END else '' end +
-case when scc.definition IS NOT NULL THEN ' AS ' + scc.definition ELSE '' END +
-CASE WHEN sc.collation_name IS NOT NULL THEN ' COLLATE ' + sc.collation_name ELSE ''  END +
-case when sc.is_rowguidcol = 1 THEN ' ROWGUIDCOL' ELSE '' END +
-case when scc.definition IS NULL AND sc.is_nullable = 0 then ' NOT NULL' else '' end + 
-case when scc.definition IS NULL AND sm.definition IS NOT NULL AND sed.referencing_id IS NULL then ' CONSTRAINT [' + OBJECT_NAME(sc.default_object_id) + '] DEFAULT ' +  OBJECT_DEFINITION(sc.default_object_id) else '' END +
-case when scc.definition IS NULL AND cc.definition IS NOT NULL then ' CONSTRAINT [' + cc.name + '] CHECK ' + cc.definition ELSE '' END +
-CASE WHEN sc.is_identity = 1 THEN ' IDENTITY(' + CAST(IDENTITYPROPERTY(sc.object_id, 'SeedValue') AS VARCHAR(5)) + ',' + CAST(IDENTITYPROPERTY(sc.object_id, 'IncrementValue') AS VARCHAR(5)) + ')'   ELSE ''   END + 
-'' as script, sc.is_computed
-from sys.objects so
-inner join sys.columns sc on sc.object_id = so.object_id
-inner join sys.types st on st.user_type_id = sc.user_type_id
-LEFT JOIN sys.default_constraints sm ON sm.object_id = sc.default_object_id
-LEFT JOIN sys.sql_expression_dependencies sed ON sm.object_id = sed.referencing_id
-LEFT JOIN sys.check_constraints cc ON sc.object_id = cc.parent_object_id AND cc.parent_column_id = sc.column_id 
-LEFT JOIN sys.computed_columns scc on sc.object_id = sc.object_id and sc.column_id = scc.column_id and sc.is_computed = 1
-WHERE so.type = 'U'
-and so.object_id = OBJECT_ID(N'{0}')
-order by sc.column_id";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(columnsSql, table_name)))
-                {
-                    int counter = 0;
-                    while (cidr.Read())
-                    {
-                        string column_name = cidr.GetStringSafe(0);
-                        string column_def = cidr.GetStringSafe(1);
-                        bool is_computed = cidr.GetBoolean(2);
-
-                        if (counter++ > 0)
-                        {
-                            tb_sql.AppendLine(",");
-                        }
-                        tb_sql.Append("\t[");
-                        tb_sql.Append(column_name);
-                        tb_sql.Append("] ");
-                        tb_sql.Append(column_def);
-
-                        if (is_computed)
-                        {
-                            exp_dependencies.Add(table_name);
-                        }
-                    }
-                }
-
-                // Add the primary key and unique constraints
-                Log.Logger.Debug("Adding Primary Key for table {0} ...", table_name);
-                string primaryKeySql = @"select si.name, case when is_primary_key = 1 then 'PRIMARY KEY ' + si.type_desc else 'UNIQUE' end, COL_NAME(sic.[object_id], sic.column_id)  -- 'CONSTRAINT [' + si.name + '] PRIMARY KEY ' + si.type_desc + ' ([BudgetTemplateId])'
-from sys.indexes si 
-inner join sys.index_columns sic on si.object_id = sic.object_id and si.index_id = sic.index_id
-where (is_primary_key = 1 or is_unique_constraint = 1) and si.object_id = OBJECT_ID(N'{0}')
-order by key_ordinal";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(primaryKeySql, table_name)))
-                {
-                    string old_name = null;
-
-                    string pk_name = null;
-                    string pk_type = null;
-                    List<string> key_columns = new List<string>();
-
-                    while (cidr.Read())
-                    {
-                        pk_name = cidr.GetStringSafe(0);
-                        if (old_name != null && old_name != pk_name)
-                        {
-                            tb_sql.AppendLine(",");
-                            tb_sql.Append("\tCONSTRAINT [");
-                            tb_sql.Append(old_name);
-                            tb_sql.Append("] ");
-                            tb_sql.Append(pk_type);
-                            tb_sql.Append(" ([");
-                            tb_sql.Append(string.Join("],[", key_columns));
-                            tb_sql.Append("])");
-
-                            key_columns = new List<string>();
-                        }
-
-                        pk_type = cidr.GetStringSafe(1);
-                        string col_name = cidr.GetStringSafe(2);
-
-                        key_columns.Add(col_name);
-
-                        old_name = pk_name;
-                    }
-
-                    if (old_name != null)
-                    {
-                        tb_sql.AppendLine(",");
-                        tb_sql.Append("\tCONSTRAINT [");
-                        tb_sql.Append(old_name);
-                        tb_sql.Append("] ");
-                        tb_sql.Append(pk_type);
-                        tb_sql.Append(" ([");
-                        tb_sql.Append(string.Join("],[", key_columns));
-                        tb_sql.Append("])");
-                    }
-                }
-
-                tb_sql.AppendLine("");
-                tb_sql.AppendLine(")");
-                tb_sql.AppendLine("GO");
-                tb_sql.AppendLine("");
-
-                // Add the DEFAULTS dependent on expressions
-                Log.Logger.Debug("Adding Defaults for table {0} ...", table_name);
-                string depfunSql = @"select OBJECT_DEFINITION(sc.default_object_id), sc.name, sm.name
-from sys.objects so
-inner join sys.columns sc on sc.object_id = so.object_id
-inner join sys.types st on st.user_type_id = sc.user_type_id
-INNER JOIN sys.default_constraints sm ON sm.object_id = sc.default_object_id
-INNER JOIN sys.sql_expression_dependencies sed ON sm.object_id = sed.referencing_id
-LEFT JOIN sys.check_constraints cc ON sc.object_id = cc.parent_object_id AND cc.parent_column_id = sc.column_id 
-WHERE so.type = 'U'
-and so.object_id = OBJECT_ID(N'{0}')
-order by so.name, sc.column_id";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(depfunSql, table_name)))
-                {
-                    while (cidr.Read())
-                    {
-                        string def_func = cidr.GetStringSafe(0);
-                        string col_name = cidr.GetStringSafe(1);
-                        string constraint_name = cidr.GetStringSafe(2);
-
-                        dep_dependencies.Add(constraint_name);
-
-                        dep_sql.Append("ALTER TABLE [");
-                        dep_sql.Append(table_name);
-                        dep_sql.Append("] ADD CONSTRAINT [");
-                        dep_sql.Append(constraint_name);
-                        dep_sql.Append("] DEFAULT [");
-                        dep_sql.Append(def_func);
-                        dep_sql.AppendLine("]");
-                        dep_sql.Append("FOR ([");
-                        dep_sql.Append(col_name);
-                        dep_sql.AppendLine("]");
-                        dep_sql.AppendLine("GO");
-                        dep_sql.AppendLine("");
-                    }
-                }
-
-                // Add the FOREIGN KEY constraints
-                Log.Logger.Debug("Adding Foreign Keys for table {0} ...", table_name);
-                string foreignKeySql = @"select si.name as constraint_name, 
-COL_NAME(sic.parent_object_id, sic.parent_column_id) as fk_contents, 
-object_name(sic.referenced_object_id) as references_table,
-COL_NAME(sic.[referenced_object_id], sic.referenced_column_id) as references_contents,
-CASE WHEN delete_referential_action > 0 THEN ' ON DELETE ' + REPLACE(delete_referential_action_desc, '_', ' ') ELSE '' END +
-CASE WHEN update_referential_action > 0 THEN ' ON UPDATE ' + REPLACE(update_referential_action_desc, '_', ' ') ELSE '' END as cascade_desc
-from sys.foreign_keys si 
-inner join sys.foreign_key_columns sic on si.object_id = sic.constraint_object_id
-where si.parent_object_id = OBJECT_ID(N'{0}')
-order by constraint_name";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(foreignKeySql, table_name)))
-                {
-                    string old_fk_name = null;
-
-                    string fk_name = null;
-                    string fk_contents = null;
-                    string references_table = null;
-                    string cascade_desc = null;
-                    List<string> ref_columns = new List<string>();
-                    List<string> key_columns = new List<string>();
-
-                    while (cidr.Read())
-                    {
-                        fk_name = cidr.GetStringSafe(0);
-                        if (old_fk_name != null && old_fk_name != fk_name)
-                        {
-                            // new table, so we should write the prior alter table
-                            fk_sql.Append("ALTER TABLE [");
-                            fk_sql.Append(table_name);
-                            fk_sql.Append("] ADD CONSTRAINT [");
-                            fk_sql.Append(old_fk_name);
-                            fk_sql.AppendLine("]");
-                            fk_sql.Append("\tFOREIGN KEY ([");
-                            fk_sql.Append(string.Join("],[", ref_columns));
-                            fk_sql.Append("]) REFERENCES [");
-                            fk_sql.Append(references_table);
-                            fk_sql.Append("] ([");
-                            fk_sql.Append(string.Join("],[", key_columns));
-                            // End the prior statement
-                            fk_sql.Append("]) ");
-                            fk_sql.AppendLine(cascade_desc);
-                            fk_sql.AppendLine("GO");
-                            fk_sql.AppendLine("");
-
-                            key_columns = new List<string>();
-                            ref_columns = new List<string>();
-                        }
-
-                        string references_contents = cidr.GetStringSafe(3);
-                        cascade_desc = cidr.GetStringSafe(4);
-
-                        fk_contents = cidr.GetStringSafe(1);
-                        references_table = cidr.GetStringSafe(2);
-
-                        ref_columns.Add(fk_contents);
-                        key_columns.Add(references_contents);
-
-                        old_fk_name = fk_name;
-                    }
-
-                    if (old_fk_name != null)
-                    {
-                        // new table, so we should write the prior alter table
-                        fk_sql.Append("ALTER TABLE [");
-                        fk_sql.Append(table_name);
-                        fk_sql.Append("] ADD CONSTRAINT [");
-                        fk_sql.Append(old_fk_name);
-                        fk_sql.AppendLine("]");
-                        fk_sql.Append("\tFOREIGN KEY ([");
-                        fk_sql.Append(string.Join("],[", ref_columns));
-                        fk_sql.Append("]) REFERENCES [");
-                        fk_sql.Append(references_table);
-                        fk_sql.Append("] ([");
-                        fk_sql.Append(string.Join("],[", key_columns));
-                        // End the prior statement
-                        fk_sql.Append("]) ");
-                        fk_sql.AppendLine(cascade_desc);
-                        fk_sql.AppendLine("GO");
-                        fk_sql.AppendLine("");
-                    }
-                }
-
-                // Add the INDEXES
-                Log.Logger.Debug("Adding Indexes for table {0} ...", table_name);
-                string indexSql = @"select i.name, object_name(ic.object_id), COL_NAME(ic.object_id, ic.column_id), i.filter_definition, CASE when i.is_unique = 1 THEN 'UNIQUE ' ELSE '' END + i.type_desc + ' INDEX', ic.is_descending_key, ic.is_included_column
-from sys.tables t
-inner join sys.indexes i on t.object_id = i.object_id and i.is_primary_key = 0 and i.is_unique_constraint = 0
-inner join sys.index_columns ic on i.object_id = ic.object_id and i.index_id = ic.index_id
-where t.name = '{0}'
-order by ic.index_id, ic.key_ordinal";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(indexSql, table_name)))
-                {
-                    string old_idx_name = null;
-
-                    string idx_name = null;
-                    List<string> key_columns = new List<string>();
-                    List<string> include_columns = new List<string>();
-                    string references_table = null;
-                    string filter_def = null;
-                    string type_name = null;
-                    bool is_included = false;
-                    bool is_descending = false;
-
-                    while (cidr.Read())
-                    {
-                        idx_name = cidr.GetStringSafe(0);
-                        if (old_idx_name != null && old_idx_name != idx_name)
-                        {
-                            // new table, so we should write the prior alter table
-                            idx_sql.Append("CREATE ");
-                            idx_sql.Append(type_name);
-                            idx_sql.Append(" [");
-                            idx_sql.Append(old_idx_name);
-                            idx_sql.Append("]");
-                            idx_sql.Append(" ON [");
-                            idx_sql.Append(references_table);
-                            idx_sql.Append("] (");
-                            idx_sql.Append(string.Join(",", key_columns));
-
-                            if (!string.IsNullOrWhiteSpace(filter_def))
-                            {
-                                idx_sql.Append(") WHERE (");
-                                idx_sql.Append(filter_def);
-                            }
-                            if (include_columns.Count > 0)
-                            {
-                                idx_sql.Append(") INCLUDE (");
-                                idx_sql.Append(string.Join(",", include_columns));
-                            }
-                            // End the prior statement
-                            idx_sql.AppendLine(")");
-                            idx_sql.AppendLine("GO");
-                            idx_sql.AppendLine("");
-
-                            key_columns = new List<string>();
-                            include_columns = new List<string>();
-                        }
-
-                        references_table = cidr.GetStringSafe(1);
-                        filter_def = cidr.GetStringSafe(3);
-                        type_name = cidr.GetStringSafe(4);
-                        is_descending = cidr.GetBoolean(5);
-                        is_included = cidr.GetBoolean(6);
-
-                        string references_contents = string.Concat("[", cidr.GetStringSafe(2), "]");
-                        if (is_descending)
-                        {
-                            references_contents += " DESC";
-                        }
-
-                        if (is_included)
-                        {
-                            include_columns.Add(references_contents);
-                        }
-                        else
-                        {
-                            key_columns.Add(references_contents);
-                        }
-
-                        old_idx_name = idx_name;
-                    }
-
-                    if (old_idx_name != null)
-                    {
-                        // new table, so we should write the prior alter table
-                        idx_sql.Append("CREATE ");
-                        idx_sql.Append(type_name);
-                        idx_sql.Append(" [");
-                        idx_sql.Append(old_idx_name);
-                        idx_sql.Append("]");
-                        idx_sql.Append(" ON [");
-                        idx_sql.Append(references_table);
-                        idx_sql.Append("] (");
-                        idx_sql.Append(string.Join(",", key_columns));
-
-                        if (!string.IsNullOrWhiteSpace(filter_def))
-                        {
-                            idx_sql.Append(") WHERE (");
-                            idx_sql.Append(filter_def);
-                        }
-                        if (include_columns.Count > 0)
-                        {
-                            idx_sql.Append(") INCLUDE (");
-                            idx_sql.Append(string.Join(",", include_columns));
-                        }
-                        // End the prior statement
-                        idx_sql.AppendLine(")");
-                        idx_sql.AppendLine("GO");
-                        idx_sql.AppendLine("");
-                    }
-                }
-
-                // Add the DESCRIPTIONS
-                Log.Logger.Debug("Adding Descriptions for table {0} ...", table_name);
-                string commentSQL = @"select ep.value as ddescription, SCHEMA_NAME(so.schema_id) as dschema, so.name as dtable, COL_NAME(so.object_id, ep.minor_id) as dcolumn 
-from sys.extended_properties ep 
-left join sys.objects so on ep.major_id = so.object_id
-where ep.name = 'MS_Description' and ep.major_id = OBJECT_ID(N'{0}')";
-                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(commentSQL, table_name)))
-                {
-                    while (cidr.Read())
-                    {
-                        string description = cidr.GetStringSafe(0);
-                        string schema = cidr.GetStringSafe(1);
-                        string table = cidr.GetStringSafe(2);
-                        string column = cidr.GetStringSafe(3);
-
-                        desc_sql.Append("EXECUTE sp_addextendedproperty N'MS_Description', N'");
-                        desc_sql.Append(description.Replace("'", "''"));
-                        desc_sql.Append("', 'SCHEMA', N'");
-                        desc_sql.Append(schema);
-                        desc_sql.Append("', 'TABLE', N'");
-                        desc_sql.Append(table);
-                        if (!string.IsNullOrWhiteSpace(column))
-                        {
-                            desc_sql.Append("', 'COLUMN', N'");
-                            desc_sql.Append(column);
-                            desc_sql.AppendLine("'");
-                        }
-                        else
-                        {
-                            desc_sql.AppendLine("', NULL, NULL");
-                        }
-                        desc_sql.AppendLine("GO");
-                        desc_sql.AppendLine("");
-                    }
-                }
+                ScriptCreateTable(dataContext, table_name, tb_sql, ext_dependencies);
+                FetchExpressionDefaults(dataContext, table_name, ext_dependencies);
+                ScriptForeignKeys(dataContext, table_name, fk_sql);
+                ScriptIndexes(dataContext, table_name, idx_sql);
+                ScriptDescriptions(dataContext, table_name, desc_sql);
             }
 
-            Log.Logger.Information("Done Processing All Tables.");
+            Log.Logger.Information("Done External Dependencies...");
+            StringBuilder ext_sql = ScriptExternalDependencies(dataContext, ext_dependencies);
+            Log.Logger.Information("Done Processing All Tables");
 
             // Build the full script
             StringBuilder sql = new StringBuilder();
-
-            // Place any dependencies for the table scripts here
-            sql.AppendLine("--------------------------------------------");
-            sql.AppendLine("------------ Tables Dependencies------------");
-            sql.AppendLine("--------------------------------------------");
-            foreach (string table_name in exp_dependencies)
+            if (ext_sql.Length > 0)
             {
-
+                sql.AppendLine("-----------------------------------------------");
+                sql.AppendLine("------------ External Dependencies ------------");
+                sql.AppendLine("-----------------------------------------------");
+                sql.Append(ext_sql);
             }
-
-            sql.AppendLine("------------------------------------");
-            sql.AppendLine("------------ Add Tables ------------");
-            sql.AppendLine("------------------------------------");
-            sql.Append(tb_sql);
+            if (tb_sql.Length > 0)
+            {
+                sql.AppendLine("------------------------------------");
+                sql.AppendLine("------------ Add Tables ------------");
+                sql.AppendLine("------------------------------------");
+                sql.Append(tb_sql);
+            }
             if (desc_sql.Length > 0)
             {
                 sql.AppendLine("-----------------------------------------------------------");
@@ -620,24 +216,7 @@ where ep.name = 'MS_Description' and ep.major_id = OBJECT_ID(N'{0}')";
                 sql.Append(idx_sql);
             }
 
-            StringBuilder full_dep_sql = new StringBuilder();
-            if (dep_sql.Length > 0)
-            {                
-                full_dep_sql.AppendLine("--------------------------------------------");
-                full_dep_sql.AppendLine("------------ Tables Dependencies------------");
-                full_dep_sql.AppendLine("--------------------------------------------");
-                foreach (string constraint_name in dep_dependencies)
-                {
-
-                }
-                
-                full_dep_sql.Append("---------------------------------------------------------------\n");
-                full_dep_sql.Append("------------ Add Defaults Dependent on Expressions ------------\n");
-                full_dep_sql.Append("---------------------------------------------------------------\n");
-
-                full_dep_sql.Append(dep_sql);
-            }
-            return new List<string>() { sql.ToString(), full_dep_sql.ToString() };
+            return new List<string>() { sql.ToString() };
         }
 
         public string GetExtractSQL(string type)
@@ -741,6 +320,469 @@ select o.type, o.type_desc, o.name from sys.sql_expression_dependencies a inner 
     CONSTRAINT [PK_DatabaseVersion] PRIMARY KEY ([SystemId], [Version])
 )";
         }
+
+
+
+
+        private static StringBuilder ScriptExternalDependencies(DataContext dataContext, List<string> ext_dependencies)
+        {
+            StringBuilder ext_sql = new StringBuilder(10240);
+
+            // Place any dependencies for the table scripts here
+            Dictionary<string, string> set = new Dictionary<string, string>();
+            for (int i = 0; i < ext_dependencies.Count; i++)
+            {
+                string dep_name = ext_dependencies[i];
+                string expdepSql = @"select so.name, sm.definition
+from 
+sys.sql_expression_dependencies l1
+inner join sys.objects so on so.object_id = l1.referenced_id and l1.referencing_id <> so.object_id
+inner join sys.sql_modules sm on so.object_id = sm.object_id
+where l1.referencing_id = OBJECT_ID(N'{0}')";
+
+                // Keep looping over this until there are no results, meaning no further dependencies
+                using (IDataReader cidr = dataContext.ExecuteReader(string.Format(expdepSql, dep_name)))
+                {
+                    while (cidr.Read())
+                    {
+                        string obj_name = cidr.GetStringSafe(0);
+                        string obj_def = cidr.GetStringSafe(1);
+                        if (!set.ContainsKey(obj_name))
+                        {
+                            set.Add(obj_name, obj_def);
+                            ext_dependencies.Add(obj_name);
+                        }
+                    }
+                }
+            }
+            foreach (string key in set.Keys.Reverse())
+            {
+                ext_sql.AppendLine(set[key]);
+                ext_sql.AppendLine("GO");
+                ext_sql.AppendLine("");
+            }
+
+            return ext_sql;
+        }
+
+        private static void ScriptDescriptions(DataContext dataContext, string table_name, StringBuilder desc_sql)
+        {
+            // Add the DESCRIPTIONS
+            Log.Logger.Debug("Adding Descriptions for table {0} ...", table_name);
+            string commentSQL = @"select ep.value as ddescription, SCHEMA_NAME(so.schema_id) as dschema, so.name as dtable, COL_NAME(so.object_id, ep.minor_id) as dcolumn 
+from sys.extended_properties ep 
+left join sys.objects so on ep.major_id = so.object_id
+where ep.name = 'MS_Description' and ep.major_id = OBJECT_ID(N'{0}')";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(commentSQL, table_name)))
+            {
+                while (cidr.Read())
+                {
+                    string description = cidr.GetStringSafe(0);
+                    string schema = cidr.GetStringSafe(1);
+                    string table = cidr.GetStringSafe(2);
+                    string column = cidr.GetStringSafe(3);
+
+                    desc_sql.Append("EXECUTE sp_addextendedproperty N'MS_Description', N'");
+                    desc_sql.Append(description.Replace("'", "''"));
+                    desc_sql.Append("', 'SCHEMA', N'");
+                    desc_sql.Append(schema);
+                    desc_sql.Append("', 'TABLE', N'");
+                    desc_sql.Append(table);
+                    if (!string.IsNullOrWhiteSpace(column))
+                    {
+                        desc_sql.Append("', 'COLUMN', N'");
+                        desc_sql.Append(column);
+                        desc_sql.AppendLine("'");
+                    }
+                    else
+                    {
+                        desc_sql.AppendLine("', NULL, NULL");
+                    }
+                    desc_sql.AppendLine("GO");
+                    desc_sql.AppendLine("");
+                }
+            }
+        }
+
+        private static void ScriptIndexes(DataContext dataContext, string table_name, StringBuilder idx_sql)
+        {
+            // Add the INDEXES
+            Log.Logger.Debug("Adding Indexes for table {0} ...", table_name);
+            string indexSql = @"select i.name, object_name(ic.object_id), COL_NAME(ic.object_id, ic.column_id), i.filter_definition, CASE when i.is_unique = 1 THEN 'UNIQUE ' ELSE '' END + i.type_desc + ' INDEX', ic.is_descending_key, ic.is_included_column
+from sys.tables t
+inner join sys.indexes i on t.object_id = i.object_id and i.is_primary_key = 0 and i.is_unique_constraint = 0
+inner join sys.index_columns ic on i.object_id = ic.object_id and i.index_id = ic.index_id
+where t.name = '{0}'
+order by ic.index_id, ic.key_ordinal";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(indexSql, table_name)))
+            {
+                string old_idx_name = null;
+
+                string idx_name = null;
+                List<string> key_columns = new List<string>();
+                List<string> include_columns = new List<string>();
+                string references_table = null;
+                string filter_def = null;
+                string type_name = null;
+                bool is_included = false;
+                bool is_descending = false;
+
+                while (cidr.Read())
+                {
+                    idx_name = cidr.GetStringSafe(0);
+                    if (old_idx_name != null && old_idx_name != idx_name)
+                    {
+                        // new table, so we should write the prior alter table
+                        idx_sql.Append("CREATE ");
+                        idx_sql.Append(type_name);
+                        idx_sql.Append(" [");
+                        idx_sql.Append(old_idx_name);
+                        idx_sql.Append("]");
+                        idx_sql.Append(" ON [");
+                        idx_sql.Append(references_table);
+                        idx_sql.Append("] (");
+                        idx_sql.Append(string.Join(",", key_columns));
+
+                        if (!string.IsNullOrWhiteSpace(filter_def))
+                        {
+                            idx_sql.Append(") WHERE (");
+                            idx_sql.Append(filter_def);
+                        }
+                        if (include_columns.Count > 0)
+                        {
+                            idx_sql.Append(") INCLUDE (");
+                            idx_sql.Append(string.Join(",", include_columns));
+                        }
+                        // End the prior statement
+                        idx_sql.AppendLine(")");
+                        idx_sql.AppendLine("GO");
+                        idx_sql.AppendLine("");
+
+                        key_columns = new List<string>();
+                        include_columns = new List<string>();
+                    }
+
+                    references_table = cidr.GetStringSafe(1);
+                    filter_def = cidr.GetStringSafe(3);
+                    type_name = cidr.GetStringSafe(4);
+                    is_descending = cidr.GetBoolean(5);
+                    is_included = cidr.GetBoolean(6);
+
+                    string references_contents = string.Concat("[", cidr.GetStringSafe(2), "]");
+                    if (is_descending)
+                    {
+                        references_contents += " DESC";
+                    }
+
+                    if (is_included)
+                    {
+                        include_columns.Add(references_contents);
+                    }
+                    else
+                    {
+                        key_columns.Add(references_contents);
+                    }
+
+                    old_idx_name = idx_name;
+                }
+
+                if (old_idx_name != null)
+                {
+                    // new table, so we should write the prior alter table
+                    idx_sql.Append("CREATE ");
+                    idx_sql.Append(type_name);
+                    idx_sql.Append(" [");
+                    idx_sql.Append(old_idx_name);
+                    idx_sql.Append("]");
+                    idx_sql.Append(" ON [");
+                    idx_sql.Append(references_table);
+                    idx_sql.Append("] (");
+                    idx_sql.Append(string.Join(",", key_columns));
+
+                    if (!string.IsNullOrWhiteSpace(filter_def))
+                    {
+                        idx_sql.Append(") WHERE (");
+                        idx_sql.Append(filter_def);
+                    }
+                    if (include_columns.Count > 0)
+                    {
+                        idx_sql.Append(") INCLUDE (");
+                        idx_sql.Append(string.Join(",", include_columns));
+                    }
+                    // End the prior statement
+                    idx_sql.AppendLine(")");
+                    idx_sql.AppendLine("GO");
+                    idx_sql.AppendLine("");
+                }
+            }
+        }
+
+        private static void ScriptForeignKeys(DataContext dataContext, string table_name, StringBuilder fk_sql)
+        {
+            // Add the FOREIGN KEY constraints
+            Log.Logger.Debug("Adding Foreign Keys for table {0} ...", table_name);
+            string foreignKeySql = @"select si.name as constraint_name, 
+COL_NAME(sic.parent_object_id, sic.parent_column_id) as fk_contents, 
+object_name(sic.referenced_object_id) as references_table,
+COL_NAME(sic.[referenced_object_id], sic.referenced_column_id) as references_contents,
+CASE WHEN delete_referential_action > 0 THEN ' ON DELETE ' + REPLACE(delete_referential_action_desc, '_', ' ') ELSE '' END +
+CASE WHEN update_referential_action > 0 THEN ' ON UPDATE ' + REPLACE(update_referential_action_desc, '_', ' ') ELSE '' END as cascade_desc
+from sys.foreign_keys si 
+inner join sys.foreign_key_columns sic on si.object_id = sic.constraint_object_id
+where si.parent_object_id = OBJECT_ID(N'{0}')
+order by constraint_object_id";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(foreignKeySql, table_name)))
+            {
+                string old_fk_name = null;
+
+                string fk_name = null;
+                string fk_contents = null;
+                string references_table = null;
+                string cascade_desc = null;
+                List<string> ref_columns = new List<string>();
+                List<string> key_columns = new List<string>();
+
+                while (cidr.Read())
+                {
+                    fk_name = cidr.GetStringSafe(0);
+                    if (old_fk_name != null && old_fk_name != fk_name)
+                    {
+                        // new table, so we should write the prior alter table
+                        fk_sql.Append("ALTER TABLE [");
+                        fk_sql.Append(table_name);
+                        fk_sql.Append("] ADD CONSTRAINT [");
+                        fk_sql.Append(old_fk_name);
+                        fk_sql.AppendLine("]");
+                        fk_sql.Append("\tFOREIGN KEY ([");
+                        fk_sql.Append(string.Join("],[", ref_columns));
+                        fk_sql.Append("]) REFERENCES [");
+                        fk_sql.Append(references_table);
+                        fk_sql.Append("] ([");
+                        fk_sql.Append(string.Join("],[", key_columns));
+                        // End the prior statement
+                        fk_sql.Append("]) ");
+                        fk_sql.AppendLine(cascade_desc);
+                        fk_sql.AppendLine("GO");
+                        fk_sql.AppendLine("");
+
+                        key_columns = new List<string>();
+                        ref_columns = new List<string>();
+                    }
+
+                    string references_contents = cidr.GetStringSafe(3);
+                    cascade_desc = cidr.GetStringSafe(4);
+
+                    fk_contents = cidr.GetStringSafe(1);
+                    references_table = cidr.GetStringSafe(2);
+
+                    ref_columns.Add(fk_contents);
+                    key_columns.Add(references_contents);
+
+                    old_fk_name = fk_name;
+                }
+
+                if (old_fk_name != null)
+                {
+                    // new table, so we should write the prior alter table
+                    fk_sql.Append("ALTER TABLE [");
+                    fk_sql.Append(table_name);
+                    fk_sql.Append("] ADD CONSTRAINT [");
+                    fk_sql.Append(old_fk_name);
+                    fk_sql.AppendLine("]");
+                    fk_sql.Append("\tFOREIGN KEY ([");
+                    fk_sql.Append(string.Join("],[", ref_columns));
+                    fk_sql.Append("]) REFERENCES [");
+                    fk_sql.Append(references_table);
+                    fk_sql.Append("] ([");
+                    fk_sql.Append(string.Join("],[", key_columns));
+                    // End the prior statement
+                    fk_sql.Append("]) ");
+                    fk_sql.AppendLine(cascade_desc);
+                    fk_sql.AppendLine("GO");
+                    fk_sql.AppendLine("");
+                }
+            }
+        }
+
+        private static void FetchExpressionDefaults(DataContext dataContext, string table_name, List<string> ext_dependencies)
+        {
+            // Add the DEFAULTS dependent on expressions
+            Log.Logger.Debug("Adding Defaults for table {0} ...", table_name);
+            string depfunSql = @"select OBJECT_DEFINITION(sc.default_object_id), sc.name, sm.name
+from sys.objects so
+inner join sys.columns sc on sc.object_id = so.object_id
+inner join sys.types st on st.user_type_id = sc.user_type_id
+INNER JOIN sys.default_constraints sm ON sm.object_id = sc.default_object_id
+INNER JOIN sys.sql_expression_dependencies sed ON sm.object_id = sed.referencing_id
+LEFT JOIN sys.check_constraints cc ON sc.object_id = cc.parent_object_id AND cc.parent_column_id = sc.column_id 
+WHERE so.type = 'U'
+and so.object_id = OBJECT_ID(N'{0}')
+order by so.name, sc.column_id";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(depfunSql, table_name)))
+            {
+                while (cidr.Read())
+                {
+                    string constraint_name = cidr.GetStringSafe(2);
+                    ext_dependencies.Add(constraint_name);
+                }
+            }
+        }
+
+        private static void ScriptCreateTable(DataContext dataContext, string table_name, StringBuilder tb_sql, List<string> ext_dependencies)
+        {
+            // Create the table
+            tb_sql.Append("CREATE TABLE [");
+            tb_sql.Append(table_name);
+            tb_sql.AppendLine("] (");
+
+            // Grab columns
+            string columnsSql = @"select sc.Name, 
+case when scc.definition IS NULL THEN st.name + ' ' ELSE '' END + 
+case when scc.definition IS NULL AND st.Name in ('varchar', 'char', 'varbinary', 'binary') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length as varchar) END + ') ' else '' end +
+case when scc.definition IS NULL AND st.Name in ('nvarchar', 'nchar') then '(' + CASE WHEN sc.max_length = -1 THEN 'MAX' else cast(sc.max_length/2 as varchar) END + ') ' else '' end +
+case when scc.definition IS NULL AND st.Name in ('numeric', 'decimal', 'float') then '(' + cast(sc.precision as varchar(20)) + CASE WHEN sc.scale > 0 THEN ',' + cast(sc.scale as varchar(20)) + ')' else ')' END else '' end +
+case when scc.definition IS NOT NULL THEN ' AS ' + scc.definition ELSE '' END +
+CASE WHEN sc.collation_name IS NOT NULL THEN ' COLLATE ' + sc.collation_name ELSE ''  END +
+case when sc.is_rowguidcol = 1 THEN ' ROWGUIDCOL' ELSE '' END +
+case when scc.definition IS NULL AND sc.is_nullable = 0 then ' NOT NULL' else '' end + 
+case when sm.definition IS NOT NULL then ' CONSTRAINT [' + OBJECT_NAME(sc.default_object_id) + '] DEFAULT ' +  OBJECT_DEFINITION(sc.default_object_id) else '' END +
+case when scc.definition IS NULL AND cc.definition IS NOT NULL then ' CONSTRAINT [' + cc.name + '] CHECK ' + cc.definition ELSE '' END +
+CASE WHEN sc.is_identity = 1 THEN ' IDENTITY(' + CAST(IDENTITYPROPERTY(sc.object_id, 'SeedValue') AS VARCHAR(5)) + ',' + CAST(IDENTITYPROPERTY(sc.object_id, 'IncrementValue') AS VARCHAR(5)) + ')'   ELSE ''   END + 
+'' as script, sc.is_computed
+from sys.objects so
+inner join sys.columns sc on sc.object_id = so.object_id
+inner join sys.types st on st.user_type_id = sc.user_type_id
+LEFT JOIN sys.default_constraints sm ON sm.object_id = sc.default_object_id
+LEFT JOIN sys.sql_expression_dependencies sed ON sm.object_id = sed.referencing_id
+LEFT JOIN sys.check_constraints cc ON sc.object_id = cc.parent_object_id AND cc.parent_column_id = sc.column_id 
+LEFT JOIN sys.computed_columns scc on sc.object_id = sc.object_id and sc.column_id = scc.column_id and sc.is_computed = 1
+WHERE so.type = 'U'
+and so.object_id = OBJECT_ID(N'{0}')
+order by sc.column_id";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(columnsSql, table_name)))
+            {
+                int counter = 0;
+                while (cidr.Read())
+                {
+                    string column_name = cidr.GetStringSafe(0);
+                    string column_def = cidr.GetStringSafe(1);
+                    bool is_computed = cidr.GetBoolean(2);
+
+                    if (counter++ > 0)
+                    {
+                        tb_sql.AppendLine(",");
+                    }
+                    tb_sql.Append("\t[");
+                    tb_sql.Append(column_name);
+                    tb_sql.Append("] ");
+                    tb_sql.Append(column_def);
+
+                    if (is_computed)
+                    {
+                        ext_dependencies.Add(table_name);
+                    }
+                }
+            }
+
+            // Add the primary key and unique constraints
+            Log.Logger.Debug("Adding Primary Key for table {0} ...", table_name);
+            string primaryKeySql = @"select si.name, case when is_primary_key = 1 then 'PRIMARY KEY ' + si.type_desc else 'UNIQUE' end, COL_NAME(sic.[object_id], sic.column_id)  -- 'CONSTRAINT [' + si.name + '] PRIMARY KEY ' + si.type_desc + ' ([BudgetTemplateId])'
+from sys.indexes si 
+inner join sys.index_columns sic on si.object_id = sic.object_id and si.index_id = sic.index_id
+where (is_primary_key = 1 or is_unique_constraint = 1) and si.object_id = OBJECT_ID(N'{0}')
+order by key_ordinal";
+            using (IDataReader cidr = dataContext.ExecuteReader(string.Format(primaryKeySql, table_name)))
+            {
+                string old_name = null;
+
+                string pk_name = null;
+                string pk_type = null;
+                List<string> key_columns = new List<string>();
+
+                while (cidr.Read())
+                {
+                    pk_name = cidr.GetStringSafe(0);
+                    if (old_name != null && old_name != pk_name)
+                    {
+                        tb_sql.AppendLine(",");
+                        tb_sql.Append("\tCONSTRAINT [");
+                        tb_sql.Append(old_name);
+                        tb_sql.Append("] ");
+                        tb_sql.Append(pk_type);
+                        tb_sql.Append(" ([");
+                        tb_sql.Append(string.Join("],[", key_columns));
+                        tb_sql.Append("])");
+
+                        key_columns = new List<string>();
+                    }
+
+                    pk_type = cidr.GetStringSafe(1);
+                    string col_name = cidr.GetStringSafe(2);
+
+                    key_columns.Add(col_name);
+
+                    old_name = pk_name;
+                }
+
+                if (old_name != null)
+                {
+                    tb_sql.AppendLine(",");
+                    tb_sql.Append("\tCONSTRAINT [");
+                    tb_sql.Append(old_name);
+                    tb_sql.Append("] ");
+                    tb_sql.Append(pk_type);
+                    tb_sql.Append(" ([");
+                    tb_sql.Append(string.Join("],[", key_columns));
+                    tb_sql.Append("])");
+                }
+            }
+
+            tb_sql.AppendLine("");
+            tb_sql.AppendLine(")");
+            tb_sql.AppendLine("GO");
+            tb_sql.AppendLine("");
+        }
+
+        private static Dictionary<string, int> GetTablesInOrder(DataContext dataContext, string schema)
+        {
+            Log.Logger.Information("Grabbing the tables and dependencies...");
+            string depSql = @"select DISTINCT OBJECT_NAME(t.object_id) as tablename, object_name(sic.referenced_object_id) as references_table
+from sys.schemas s
+inner join sys.tables t on s.schema_id = t.schema_id and s.name = '{0}' and t.type = 'U'
+left join sys.foreign_keys si  on t.object_id = si.parent_object_id
+left join sys.foreign_key_columns sic on si.object_id = sic.constraint_object_id
+order by tablename";
+            Dictionary<string, List<string>> table_with_dependencies = new Dictionary<string, List<string>>();
+            using (IDataReader idr = dataContext.ExecuteReader(string.Format(depSql, schema)))
+            {
+                string table_n = null;
+                List<string> dependencies = null;
+                while (idr.Read())
+                {
+                    string t_name = idr.GetStringSafe(0);
+                    string d_name = idr.GetStringSafe(1);
+                    if (table_n == null || table_n != t_name)
+                    {
+                        dependencies = new List<string>();
+                        table_with_dependencies.Add(t_name, dependencies);
+                        table_n = t_name;
+                    }
+
+                    if (d_name != null)
+                    {
+                        dependencies.Add(d_name);
+                    }
+                }
+            }
+
+            // Order the tables
+            Log.Logger.Information("Ordering the {0} table dependencies...", table_with_dependencies.Count);
+
+            Dictionary<string, int> sorted_tables_with_dependencies = CommonUtilities.TopSort(table_with_dependencies, true);
+
+            return sorted_tables_with_dependencies;
+        }
+
     }
 }
  

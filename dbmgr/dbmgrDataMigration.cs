@@ -127,7 +127,7 @@ namespace dbmgr.utilities
             return false;
         }
 
-        public bool ExtractSchema()
+        public bool ExtractSchema(string schema_name)
         {
             // Create the directory if it doesn't exist
             if (!Directory.Exists(_migrationScriptLocation))
@@ -139,12 +139,12 @@ namespace dbmgr.utilities
             using (DataContext dataContext = GetDataContext())
             {
                 int counter = 0;
-                List<string> schema = _database.GetExtractSchema(dataContext);
+                List<string> schema = _database.GetExtractSchema(dataContext, schema_name);
                 foreach(string contents in schema )
                 {
                     if (!string.IsNullOrWhiteSpace(contents))
                     {
-                        string filename = CreateScriptFile("baseline_schema_" + counter++, false) + ".up";
+                        string filename = CreateScriptFile("baseline_" + schema_name + "_" + counter++, false) + ".up";
                         filename = Path.Combine(_migrationScriptLocation, filename);
                         Log.Logger.Debug("Extracting schema to {0}", filename);
                         File.WriteAllText(filename, contents);

@@ -77,7 +77,7 @@ namespace dbmgr.utilities.db
             return GetScriptTypes().Where(n => n == type).FirstOrDefault();
         }
 
-        public List<string> GetExtractSchema(DataContext dataContext)
+        public List<string> GetExtractSchema(DataContext dataContext, string schema_name)
         {
             throw new NotImplementedException("Feature not available in Oracle");
         }
