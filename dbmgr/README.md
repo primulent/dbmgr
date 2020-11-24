@@ -173,7 +173,16 @@ dbmgr -g "new database script"
 
 #### Reverse engineering your database schema
 
-Currently this feature is not supported by any provider of dbmgr.
+If you want to extract the current database schema into source files, use the extract feature of dbmgr.
+
+To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract Schema command followed by the name of the schema to extract.
+```c#
+dbmgr --xs dbo
+```
+
+dbmgr will place all of the code of your database in a delta file with the proper naming convention.  Any issues reverse engineering will be displayed in the logs.
+
+Currently, only the SQL Server database provider supports this feature.
 
 ### Creating a Current Script
 
@@ -197,12 +206,12 @@ If you want to extract the current database code into source files, use the extr
 
 To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract Current command.
 ```c#
-dbmgr -xc
+dbmgr --xc
 ```
 
 dbmgr will place all of the code of your database in the proper locations with the proper naming convention.  Any issues reverse engineering will be displayed in the logs.
 
-Currently, only the SQL Server database provider supports it this feature.
+Currently, only the SQL Server database provider supports this feature.
  
 
 ### Creating a Post Script

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("dbmgr")]
-[assembly: AssemblyDescription("dbmc is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programability and data changes using direct SQL.")]
+[assembly: AssemblyDescription("dbmgr is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programability and data changes using direct SQL.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Primulent Technologies, LLC.")]
 [assembly: AssemblyProduct("dbmgr")]

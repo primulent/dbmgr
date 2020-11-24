@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">AGPL-3.0-or-later</license>
+    <projectUrl>http://www.dbmgr.net</projectUrl>
+    <icon>script-binary.ico</icon>
+    <description>$description$</description>
+    <releaseNotes>Initial release</releaseNotes>
+    <copyright>$copyright$</copyright>
+    <tags>database db migration deployment legacy</tags>
+  </metadata>
+</package>

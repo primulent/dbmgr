@@ -1,5 +1,4 @@
 ﻿using dbmgr.utilities.data;
-using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -111,11 +110,11 @@ namespace dbmgr.utilities.db
         public void EnlistTransaction(DbConnection connection)
         {
             // Handle Oracle connection not automatically enlisting in transaction
-            var oc = connection as OracleConnection;
-            if (oc != null && Transaction.Current != null)
-            {
-                oc.EnlistTransaction(Transaction.Current);
-            }
+            //var oc = connection as OracleConnection;
+            //if (oc != null && Transaction.Current != null)
+            //{
+            //    oc.EnlistTransaction(Transaction.Current);
+            //}
         }
 
         public string GetTestConnectionSQL()
