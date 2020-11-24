@@ -10,6 +10,7 @@
     <projectUrl>http://www.dbmgr.net</projectUrl>
     <icon>images\script-binary.png</icon>
     <description>$description$</description>
+    <repository type="git" url="https://github.com/primulent/dbmgr"></repository>
     <releaseNotes>Initial release</releaseNotes>
     <copyright>$copyright$</copyright>
     <tags>database db migration deployment legacy</tags>
