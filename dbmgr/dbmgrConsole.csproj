@@ -160,6 +160,9 @@
     <Content Include="script-binary.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="script-binary.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="vault.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
