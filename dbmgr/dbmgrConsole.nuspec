@@ -8,10 +8,13 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">AGPL-3.0-or-later</license>
     <projectUrl>http://www.dbmgr.net</projectUrl>
-    <icon>script-binary.ico</icon>
+    <icon>images\script-binary.ico</icon>
     <description>$description$</description>
     <releaseNotes>Initial release</releaseNotes>
     <copyright>$copyright$</copyright>
     <tags>database db migration deployment legacy</tags>
   </metadata>
+  <files>
+    <file src="script-binary.ico" target="images\" />
+  </files>
 </package>
