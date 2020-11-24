@@ -157,6 +157,9 @@
     <Compile Include="Common\VisualStudioSupport.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="script-binary.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="vault.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
