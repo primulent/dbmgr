@@ -1,6 +1,6 @@
 ﻿# Overview
 
-dbmgr is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programmability and data changes using direct SQL.   More information on [the dbmgr website](http://www.dbmgr.net/).
+dbmgr is an opinionated database migration and management framework that utilizes convention over configuration.  It enables deployment pipelines to manage database schema, programmability and data changes using direct SQL.   More information on [the dbmgr website](https://www.dbmgr.net/).
 
 ## Benefits
 Makes database deployments consistent and reliable by ensuring your database always matches your application.
@@ -95,8 +95,8 @@ _Data Source={\<host>};Initial Catalog={\<database>};Integrated Security={\<opt1
 
 To use the standard database format from a file instead of the command line, use a "vault" file.  Place your standard information into a text file on the file system and refer to it.
 ```c#
-dbmgr -dbf <path_to_vault_file>
-dbmgr -dbf vault_dbf.txt
+dbmgr --dbf <path_to_vault_file>
+dbmgr --dbf vault_dbf.txt
 ```
 SQL Server Provider file format: 
 * \<database>
@@ -111,8 +111,8 @@ Note: One line per item - leave a blank row for non-specified items.
 
 To use the provider-specific format, use the command line and specify the connection format as appropriate for the database provider.
 ```c#
-dbmgr -ci <connection_format>
-dbmgr -ci (local)\database
+dbmgr --ci <connection_format>
+dbmgr --ci (local)\database
 ```
 SQL Server Provider Format: 
 
@@ -120,20 +120,20 @@ _[user:password@]myServer\instanceName_
 
 To use a provider-specific format from a file instead of the command line, use a "vault" file.  Place your connection information into a text file on the file system and refer to it.
 ```c#
-dbmgr -cif <path_to_vault_file>
-dbmgr -cif vault_cif.txt
+dbmgr --cif <path_to_vault_file>
+dbmgr --cif vault_cif.txt
 ```
 
 Use a fully specified .NET Connection String on the command line.
 ```c#
-dbmgr -cs <connection string>
-dbmgr -cs "Data Source=(local);Initial Catalog=db;Integrated Security=true;MultipleActiveResultSets=True"
+dbmgr --cs <connection string>
+dbmgr --cs "Data Source=(local);Initial Catalog=db;Integrated Security=true;MultipleActiveResultSets=True"
 ```
 
 To use a .NET connection string from a file instead of the command line, use a "vault" file.  Place your .NET connection string into a text file on the file system and refer to it.
 ```c#
-dbmgr -csf <connection string file>
-dbmgr -csf vault_csf.txt
+dbmgr --csf <connection string file>
+dbmgr --csf vault_csf.txt
 ```
 
 SQL Server Provider Note: 
@@ -173,7 +173,13 @@ dbmgr -g "new database script"
 
 #### Reverse engineering your database schema
 
-Currently this feature is not supported by any provider of dbmgr.
+If you want to extract the current database schema into source files, use the extract feature of dbmgr.
+To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract Schema command followed by the name of the schema to extract.
+```c#
+dbmgr --xs dbo
+```
+dbmgr will place all of the code of your database in a delta file with the proper naming convention.  Any issues reverse engineering will be displayed in the logs.
+Currently, only the SQL Server database provider supports this feature.
 
 ### Creating a Current Script
 
@@ -197,12 +203,12 @@ If you want to extract the current database code into source files, use the extr
 
 To use the tool, navigate to the base directory of your project that contains the Database folder and run the Extract Current command.
 ```c#
-dbmgr -xc
+dbmgr --xc
 ```
 
 dbmgr will place all of the code of your database in the proper locations with the proper naming convention.  Any issues reverse engineering will be displayed in the logs.
 
-Currently, only the SQL Server database provider supports it this feature.
+Currently, only the SQL Server database provider supports this feature.
  
 
 ### Creating a Post Script
