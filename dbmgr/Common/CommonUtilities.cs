@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -67,9 +68,23 @@ namespace dbmgr.utilities.common
             return originalString;
         }
 
-        public static (uint crc, ulong length) ComputeAdlerCRC(string fileName)
+        public struct CRCResult
+        {
+            public uint crc;
+            public ulong length;
+
+            public CRCResult(uint crc, ulong length)
+            {
+                this.crc = crc; 
+                this.length = length;
+            }
+        }
+
+        public static CRCResult ComputeAdlerCRC(string fileName)
         {
             const ushort MOD_ADLER = 65521;
+
+            CRCResult crcResult = new CRCResult();
 
             uint a = 1;
             uint b = 0;
@@ -116,7 +131,9 @@ namespace dbmgr.utilities.common
                             if (b >= MOD_ADLER)
                                 b -= MOD_ADLER;
 
-                            return ((b << 16) | a, totalLength);
+                            crcResult.crc = (b << 16) | a;
+                            crcResult.length = totalLength;
+                            return crcResult;
                         }
                     }
                 }
@@ -126,7 +143,9 @@ namespace dbmgr.utilities.common
                 totalLength = 0;
             }
 
-            return (0, totalLength);
+            crcResult.crc = 0;
+            crcResult.length = totalLength;
+            return crcResult;
         }
 
 

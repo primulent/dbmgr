@@ -49,22 +49,22 @@ namespace dbmgr.utilities.common.Tests
         [TestMethod()]
         public void ComputeAdlerCRCRegressionTest()
         {
-            (uint crc, ulong length) expected = (0, 0);
-            (uint crc, ulong length) crc_check;
+            CommonUtilities.CRCResult expected = new CommonUtilities.CRCResult(0, 0);
+            CommonUtilities.CRCResult crc_check;
             crc_check = CommonUtilities.ComputeAdlerCRC(null);
             Assert.AreEqual(expected, crc_check);
             crc_check = CommonUtilities.ComputeAdlerCRC("filenotfound.txt");
             Assert.AreEqual(expected, crc_check);
 
             // Stable?
-            expected = (790105748, 38);
+            expected = new CommonUtilities.CRCResult(790105748, 38);
             crc_check = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest1.txt");
             Assert.AreEqual(expected, crc_check);
             crc_check = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest1.txt");
             Assert.AreEqual(expected, crc_check);
 
             // Not the same as another file
-            (uint crc, ulong length) crc_check2 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest2.txt");
+            CommonUtilities.CRCResult crc_check2 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest2.txt");
             Assert.AreNotEqual(crc_check, crc_check2);
         }
 

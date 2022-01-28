@@ -423,7 +423,9 @@ namespace dbmgr.utilities
                     foreach (string currentFileName in scriptsToRun)
                     {
                         // Get the CRC and length of the file
-                        (uint crc, ulong length) = CommonUtilities.ComputeAdlerCRC(currentFileName);
+                        CommonUtilities.CRCResult crcResult = CommonUtilities.ComputeAdlerCRC(currentFileName);
+                        uint crc = crcResult.crc;
+                        ulong length = crcResult.length;
 
                         // Determine if we need to hit the database
                         bool isUpdate = false;
