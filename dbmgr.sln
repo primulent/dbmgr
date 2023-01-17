@@ -1,69 +1,31 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30011.22
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32505.173
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dbmgrConsole", "dbmgr\dbmgrConsole.csproj", "{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dbmgr", "dbmgrConsole\dbmgr.csproj", "{5BAD1B7A-61D2-4A4B-82CE-87062FECDD31}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{D142A5F0-4A57-4364-86AF-60CACB020D09}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dbmgrTests", "dbmgrTests\dbmgrTests.csproj", "{9CE42F9C-D6D1-4CFD-82FC-04BB9981385D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|Mixed Platforms = Debug|Mixed Platforms
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|Mixed Platforms = Release|Mixed Platforms
-		Release|x86 = Release|x86
-		Stage|Any CPU = Stage|Any CPU
-		Stage|Mixed Platforms = Stage|Mixed Platforms
-		Stage|x86 = Stage|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|x86.ActiveCfg = Debug|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Debug|x86.Build.0 = Debug|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|Mixed Platforms.Build.0 = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|x86.ActiveCfg = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Release|x86.Build.0 = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Stage|Any CPU.ActiveCfg = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Stage|Mixed Platforms.ActiveCfg = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Stage|Mixed Platforms.Build.0 = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Stage|x86.ActiveCfg = Release|x86
-		{A8489CA8-CAE7-4A2A-AD28-C1081B47BEB0}.Stage|x86.Build.0 = Release|x86
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Debug|x86.Build.0 = Debug|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|x86.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Release|x86.Build.0 = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|Any CPU.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|Any CPU.Build.0 = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|Mixed Platforms.Build.0 = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|x86.ActiveCfg = Release|Any CPU
-		{D142A5F0-4A57-4364-86AF-60CACB020D09}.Stage|x86.Build.0 = Release|Any CPU
+		{5BAD1B7A-61D2-4A4B-82CE-87062FECDD31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BAD1B7A-61D2-4A4B-82CE-87062FECDD31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BAD1B7A-61D2-4A4B-82CE-87062FECDD31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BAD1B7A-61D2-4A4B-82CE-87062FECDD31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CE42F9C-D6D1-4CFD-82FC-04BB9981385D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CE42F9C-D6D1-4CFD-82FC-04BB9981385D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CE42F9C-D6D1-4CFD-82FC-04BB9981385D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CE42F9C-D6D1-4CFD-82FC-04BB9981385D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {9C522F0C-1549-413B-9821-FBA3CE9C5438}
-	EndGlobalSection
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
+		SolutionGuid = {638FDB51-1405-4850-BECC-635EF08D37CD}
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ConsoleApp1": {
+      "commandName": "Project",
+      "commandLineArgs": " --cif .\\vault.txt --direct test.sql"
+    }
+  }
+}

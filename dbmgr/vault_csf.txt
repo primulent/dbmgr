@@ -1,1 +1,0 @@
-﻿Data Source=(local);Initial Catalog=migair;Integrated Security=true;MultipleActiveResultSets=True
