@@ -670,7 +670,7 @@ case when sc.is_rowguidcol = 1 THEN ' ROWGUIDCOL' ELSE '' END +
 case when scc.definition IS NULL AND sc.is_nullable = 0 then ' NOT NULL' else '' end + 
 case when sm.definition IS NOT NULL then ' CONSTRAINT [' + OBJECT_NAME(sc.default_object_id) + '] DEFAULT ' +  OBJECT_DEFINITION(sc.default_object_id) else '' END +
 case when scc.definition IS NULL AND cc.definition IS NOT NULL then ' CONSTRAINT [' + cc.name + '] CHECK ' + cc.definition ELSE '' END +
-CASE WHEN sc.is_identity = 1 THEN ' IDENTITY(' + CAST(IDENTITYPROPERTY(sc.object_id, 'SeedValue') AS VARCHAR(5)) + ',' + CAST(IDENTITYPROPERTY(sc.object_id, 'IncrementValue') AS VARCHAR(5)) + ')'   ELSE ''   END + 
+CASE WHEN sc.is_identity = 1 THEN ' IDENTITY(' + CAST(IDENTITYPROPERTY(sc.object_id, 'SeedValue') AS VARCHAR(20)) + ',' + CAST(IDENTITYPROPERTY(sc.object_id, 'IncrementValue') AS VARCHAR(20)) + ')'   ELSE ''   END + 
 '' as script, sc.is_computed
 from sys.objects so
 inner join sys.columns sc on sc.object_id = so.object_id
