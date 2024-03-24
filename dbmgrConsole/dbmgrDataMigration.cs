@@ -219,18 +219,25 @@ namespace dbmgr.utilities
                     {
                         string dependency = ddr.GetStringSafe(2);
                         string dependency_type = ddr.GetStringSafe(0);
+                        string dependency_referenced_schema = ddr.GetStringSafe(3);
                         string prefix = _database.GetFileNamePrefix(dependency_type);
                         if (prefix == null)
                         {
-                            Log.Logger.Warning("Unsupported dependency type detected! Please manually review dependency for {0} of type {1}", dependency, dependency_type);
+                            Log.Logger.Warning("Unsupported dependency type detected! Please manually review dependency for {0} of type {1} with referenced schema {2}", dependency, dependency_type, dependency_referenced_schema);
                             prefix = "";
                         }
 
                         injectDependencies.Append("--{{");
-                        injectDependencies.Append(prefix + dependency);
+                        injectDependencies.Append(prefix);
+                        if (!string.IsNullOrWhiteSpace(dependency_referenced_schema))
+                        {
+                            injectDependencies.Append(dependency_referenced_schema);
+                            injectDependencies.Append("_");
+                        }
+                        injectDependencies.Append(dependency);
                         injectDependencies.Append("}}");
                         injectDependencies.Append(Environment.NewLine);
-                        Log.Logger.Information("Found dependency to {0}", dependency);
+                        Log.Logger.Information("Found dependency to {0} with referenced schema {1}", dependency, dependency_referenced_schema);
                     }
                 }
                 if (injectDependencies.Length > 0)

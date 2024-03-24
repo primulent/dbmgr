@@ -254,9 +254,9 @@ from sys.objects o inner join sys.sequences e on o.object_id = e.object_id inner
         public string GetDependenciesSQL(string name)
         {
             return string.Format($@"
-select o.type, o.type_desc, o.name from sys.dm_sql_referenced_entities('{name}', 'OBJECT') a inner join sys.objects o on o.name = a.referenced_entity_name and o.type <> 'U' and o.name <> '{name}'
+select o.type, o.type_desc, o.name, a.referenced_schema_name from sys.dm_sql_referenced_entities('{name}', 'OBJECT') a inner join sys.objects o on o.name = a.referenced_entity_name and o.type <> 'U' and o.name <> '{name}'
 union
-select o.type, o.type_desc, o.name from sys.sql_expression_dependencies a inner join sys.objects o on o.name = a.referenced_entity_name and o.type <> 'U' where a.referencing_id = OBJECT_ID('{name}') and o.name <> '{name}'");
+select o.type, o.type_desc, o.name, a.referenced_schema_name from sys.sql_expression_dependencies a inner join sys.objects o on o.name = a.referenced_entity_name and o.type <> 'U' where a.referencing_id = OBJECT_ID('{name}') and o.name <> '{name}'");
         }
 
         public string GetParameterName(string input)
