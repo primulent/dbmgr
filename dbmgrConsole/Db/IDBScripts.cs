@@ -13,7 +13,7 @@ namespace dbmgr.utilities.db
 
         string[] ParseProviderConnection(string args);
 
-        string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null);
+        string[] ParseStandardConnection(string dbName, string? dbServer = null, string? dbPort = null, string? dbUser = null, string? dbPwd = null, string? opt1 = null, string? opt2 = null);
 
         void EnlistTransaction(DbConnection connection);
 

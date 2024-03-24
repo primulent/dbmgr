@@ -100,7 +100,7 @@ namespace dbmgr.utilities.common.Tests
         [Fact]
         public void GetEmbeddedResourceContentRegressionTest()
         {
-            string s = CommonUtilities.GetEmbeddedResourceContent(null);
+            string? s = CommonUtilities.GetEmbeddedResourceContent(null);
             Assert.Null(s);
 
             s = CommonUtilities.GetEmbeddedResourceContent("garbage.file");

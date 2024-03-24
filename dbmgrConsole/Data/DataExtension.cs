@@ -19,7 +19,7 @@ namespace dbmgr.utilities.data
         /// </returns>
         /// <exception cref="System.NullReferenceException">The IDbConnection is null.</exception>
         /// <exception cref="System.ArgumentException">commandText;The command text cannot be null, empty, or contain only whitespace.</exception>
-        public static IDbCommand CreateCommand(this IDbConnection connection, string commandText, CommandType commandType = CommandType.Text, IDbTransaction transaction = null, int commandTimeout = 30)
+        public static IDbCommand CreateCommand(this IDbConnection connection, string commandText, CommandType commandType = CommandType.Text, IDbTransaction? transaction = null, int commandTimeout = 30)
         {
             if (connection == null)
             {

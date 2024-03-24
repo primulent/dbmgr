@@ -61,6 +61,7 @@ namespace dbmgr.utilities
         [Option("nocreate", HelpText = "Fail the deployment if the tracking tables do not exist")]
         public bool NoCreate { get; set; }
 
+        
 
         // System Commands
         [Option('s', "setup", HelpText = "Setup the database structure; create a \\Database directory with the appropriate subdirectories in the current folder")]
@@ -78,6 +79,9 @@ namespace dbmgr.utilities
 
         [Option('m', "migrate", HelpText = "Run the current migration against the specified database.")]
         public bool Migrate { get; set; }
+
+        [Option('b', "rollback", HelpText = "Rollback the migration scripts against the specified database.")]
+        public int Rollback { get; set; }
 
         [Option("xc", HelpText = "Extracts the current script files from the selected database")]
         public bool ExtractCurrent { get; set; }

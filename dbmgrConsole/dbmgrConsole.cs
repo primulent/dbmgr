@@ -71,8 +71,8 @@ namespace dbmgr.utilities
                 SetDatabaseType(options);
 
                 // Step #2 - get the connection parameters
-                string[] replacementParameters = null;
-                string netConnectionString = null;
+                string[]? replacementParameters = null;
+                string? netConnectionString = null;
 
                 // Do we have standard parameters?
                 if (!string.IsNullOrWhiteSpace(options.DbName))
@@ -245,6 +245,13 @@ namespace dbmgr.utilities
                     return ProcessExtractSchemaCommand(m, options.ExtractSchema) ? EXIT_CODE_SUCCESS : EXIT_CODE_GENERAL_ERROR;
                 }
 
+                // Process any rollback
+                if (options.Rollback > 0)
+                {
+                    ProcessRollbackCommand(m, options.Rollback);
+                    return EXIT_CODE_SUCCESS;
+                }
+
                 // Run the migration
                 if (options.Migrate || options.CreateSchema)
                 {
@@ -329,7 +336,15 @@ namespace dbmgr.utilities
             }
         }
 
-        private static void DeployDeltas(dbmgrDataMigration m, string directoryPrefix = null)
+        private static void RollbackDeltas(dbmgrDataMigration m, int distance = 1, string? directoryPrefix = null)
+        {
+            Stopwatch rt = new();
+            Log.Logger.Information("Processing rollback delta directories");
+            m.RollbackDeltas(distance, directoryPrefix);
+            Log.Logger.Information("Completed rollback in {0}", rt.ShowElapsedTime());
+        }
+
+        private static void DeployDeltas(dbmgrDataMigration m, string? directoryPrefix = null)
         {
             Stopwatch rt = new ();
             Log.Logger.Information("Processing delta directories");
@@ -356,6 +371,11 @@ namespace dbmgr.utilities
             DeployDeltas(m);
             DeployCurrent(m);
             DeployPost(m);
+        }
+
+        private static void ProcessRollbackCommand(dbmgrDataMigration m, int distance)
+        {
+            RollbackDeltas(m, distance);
         }
 
         private static void ProcessBlueGreenMigrateCommand(dbmgrDataMigration m, bool isBlue)
@@ -392,7 +412,7 @@ namespace dbmgr.utilities
 
         private static bool ProcessSetupCommand(dbmgrDataMigration m, bool isBlueGreen)
         {
-            string[] deltaDirectories = null;
+            string[]? deltaDirectories = null;
             if (isBlueGreen)
             {
                 deltaDirectories = new[] { "Blue", "Green" };

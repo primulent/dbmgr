@@ -19,7 +19,7 @@ namespace dbmgr.utilities.db
 
         public string DbConnectionKey { get { return "SqlServerData"; } }
 
-        public string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null)
+        public string[] ParseStandardConnection(string dbName, string? dbServer = null, string? dbPort = null, string? dbUser = null, string? dbPwd = null, string? opt1 = null, string? opt2 = null)
         {
             bool.TryParse(opt1, out bool integratedSecurity);
             string[] parameters = new string[5];
@@ -43,7 +43,7 @@ namespace dbmgr.utilities.db
             bool integratedSecurity = false;
             string[] parameters = new string[5];
 
-            string serverAndDatabase = null;
+            string? serverAndDatabase = null;
 
             string[] first = args.Split('@');
             if (first.Length == 1)
@@ -113,7 +113,7 @@ namespace dbmgr.utilities.db
         /// </summary>
         public string GetFileNamePrefix(string type)
         {
-            string prefix = null;
+            string? prefix = null;
 
             switch (type.Trim().ToUpper())
             {
@@ -242,11 +242,11 @@ namespace dbmgr.utilities.db
 
         public string GetExtractSQL(string type)
         {
-            return string.Format(@"select s.name + '_' + o.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+s.name+'.'+o.name+''')) BEGIN'+CHAR(10)+'DROP '+ CASE WHEN o.type = 'P' THEN 'PROCEDURE' WHEN o.type = 'V' THEN 'VIEW' WHEN o.type = 'TR' THEN 'TRIGGER' WHEN o.type = 'SN' THEN 'SYNONYM' WHEN o.type in ('FN', 'TF', 'AF','IF') THEN 'FUNCTION' ELSE '<object type not supported>' END +' [' + s.name + '].[' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + m.definition from sys.objects o inner join sys.sql_modules m on o.object_id = m.object_id inner join sys.schemas s on s.schema_id = o.schema_id where o.is_ms_shipped = 0 AND o.type in ({0})
-union all select o.name, '-- CLR AGGREGATE FUNCTIONS NOT SUPPORTED' from sys.objects o inner join sys.assembly_modules a on o.object_id = a.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
-union all select o.name, '-- SERVICE BROKER QUEUES NOT SUPPORTED' from sys.objects o inner join sys.service_queues q on o.object_id = q.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
-union all select o.name, 'IF (SELECT OBJECT_ID('''+s.name+'.'+o.name+''')) IS NULL BEGIN CREATE SYNONYM [' + s.name + '].[' + o.name + '] FOR ' + x.base_object_name + ' END' from sys.objects o inner join sys.synonyms x on o.object_id = x.object_id inner join sys.schemas s on s.schema_id = o.schema_id where o.is_ms_shipped = 0 AND o.type in ({0})
-union all select o.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+s.name+''+o.name+''')) BEGIN'+CHAR(10)+'DROP SEQUENCE [' + s.name + '].[' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + 'CREATE SEQUENCE [' + s.name + '].[' + o.name + '] AS [' + CAST(TYPE_NAME(e.user_type_id) AS VARCHAR(255)) + '] START WITH '+ CAST(e.current_value AS VARCHAR(255)) + ' INCREMENT BY ' + CAST(e.increment AS VARCHAR(255)) 
+            return string.Format(@"select o.name, s.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+s.name+'.'+o.name+''')) BEGIN'+CHAR(10)+'DROP '+ CASE WHEN o.type = 'P' THEN 'PROCEDURE' WHEN o.type = 'V' THEN 'VIEW' WHEN o.type = 'TR' THEN 'TRIGGER' WHEN o.type = 'SN' THEN 'SYNONYM' WHEN o.type in ('FN', 'TF', 'AF','IF') THEN 'FUNCTION' ELSE '<object type not supported>' END +' [' + s.name + '].[' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + m.definition from sys.objects o inner join sys.sql_modules m on o.object_id = m.object_id inner join sys.schemas s on s.schema_id = o.schema_id where o.is_ms_shipped = 0 AND o.type in ({0})
+union all select o.name, NULL, '-- CLR AGGREGATE FUNCTIONS NOT SUPPORTED' from sys.objects o inner join sys.assembly_modules a on o.object_id = a.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
+union all select o.name, NULL, '-- SERVICE BROKER QUEUES NOT SUPPORTED' from sys.objects o inner join sys.service_queues q on o.object_id = q.object_id where o.is_ms_shipped = 0 AND o.type in ({0})
+union all select o.name, s.name, 'IF (SELECT OBJECT_ID('''+s.name+'.'+o.name+''')) IS NULL BEGIN CREATE SYNONYM [' + s.name + '].[' + o.name + '] FOR ' + x.base_object_name + ' END' from sys.objects o inner join sys.synonyms x on o.object_id = x.object_id inner join sys.schemas s on s.schema_id = o.schema_id where o.is_ms_shipped = 0 AND o.type in ({0})
+union all select o.name, s.name, 'IF EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'''+s.name+''+o.name+''')) BEGIN'+CHAR(10)+'DROP SEQUENCE [' + s.name + '].[' + o.name + '] END' + CHAR(10) + 'GO' + CHAR(10) + 'CREATE SEQUENCE [' + s.name + '].[' + o.name + '] AS [' + CAST(TYPE_NAME(e.user_type_id) AS VARCHAR(255)) + '] START WITH '+ CAST(e.current_value AS VARCHAR(255)) + ' INCREMENT BY ' + CAST(e.increment AS VARCHAR(255)) 
 + ' MINVALUE ' + CAST(e.minimum_value AS VARCHAR(255)) + ' MAXVALUE ' + CAST(e.maximum_value AS VARCHAR(255)) + CASE WHEN e.is_cached = 1 THEN ' CACHE' ELSE '' END + CASE WHEN e.is_cycling = 1 THEN ' CYCLE' ELSE '' END 
 from sys.objects o inner join sys.sequences e on o.object_id = e.object_id inner join sys.schemas s on s.schema_id = o.schema_id where o.is_ms_shipped = 0 AND o.type in ({0})", type);
         }
@@ -437,14 +437,14 @@ where t.name = '{0}'
 order by ic.index_id, ic.key_ordinal";
             using (IDataReader cidr = dataContext.ExecuteReader(string.Format(indexSql, table_name)))
             {
-                string old_idx_name = null;
+                string? old_idx_name = null;
 
-                string idx_name = null;
+                string? idx_name = null;
                 List<string> key_columns = new List<string>();
                 List<string> include_columns = new List<string>();
-                string references_table = null;
-                string filter_def = null;
-                string type_name = null;
+                string? references_table = null;
+                string? filter_def = null;
+                string? type_name = null;
                 bool is_included = false;
                 bool is_descending = false;
 
@@ -554,13 +554,13 @@ where si.parent_object_id = OBJECT_ID(N'{0}')
 order by constraint_object_id";
             using (IDataReader cidr = dataContext.ExecuteReader(string.Format(foreignKeySql, table_name)))
             {
-                string old_fk_name = null;
+                string? old_fk_name = null;
 
-                string fk_name = null;
+                string? fk_name = null;
                 bool with_nocheck = false;
-                string fk_contents = null;
-                string references_table = null;
-                string cascade_desc = null;
+                string? fk_contents = null;
+                string? references_table = null;
+                string? cascade_desc = null;
                 List<string> ref_columns = new List<string>();
                 List<string> key_columns = new List<string>();
 
@@ -716,10 +716,10 @@ where (is_primary_key = 1 or is_unique_constraint = 1) and si.object_id = OBJECT
 order by key_ordinal";
             using (IDataReader cidr = dataContext.ExecuteReader(string.Format(primaryKeySql, table_name)))
             {
-                string old_name = null;
+                string? old_name = null;
 
-                string pk_name = null;
-                string pk_type = null;
+                string? pk_name = null;
+                string? pk_type = null;
                 List<string> key_columns = new List<string>();
 
                 while (cidr.Read())
@@ -778,8 +778,8 @@ order by tablename";
             Dictionary<string, List<string>> table_with_dependencies = new Dictionary<string, List<string>>();
             using (IDataReader idr = dataContext.ExecuteReader(string.Format(depSql, schema)))
             {
-                string table_n = null;
-                List<string> dependencies = null;
+                string? table_n = null;
+                List<string>? dependencies = null;
                 while (idr.Read())
                 {
                     string t_name = idr.GetStringSafe(0);

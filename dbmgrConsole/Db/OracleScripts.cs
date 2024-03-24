@@ -13,9 +13,9 @@ namespace dbmgr.utilities.db
         public string ShortName { get { return "oracle"; } }
         public string DbConnectionKey { get { return "OracleData"; } }
 
-        public string[] ParseStandardConnection(string dbName, string dbServer = null, string dbPort = null, string dbUser = null, string dbPwd = null, string opt1 = null, string opt2 = null)
+        public string[] ParseStandardConnection(string dbName, string? dbServer = null, string? dbPort = null, string? dbUser = null, string? dbPwd = null, string? opt1 = null, string? opt2 = null)
         {
-            string[] parameters = null;
+            string[]? parameters = null;
             return parameters;
         }
 
@@ -23,7 +23,7 @@ namespace dbmgr.utilities.db
         {
             // format: user/password@sid:host/port
 
-            string[] parameters = null;
+            string[]? parameters = null;
 
             string[] first = args.Split('@');
             if (first.Length == 2)

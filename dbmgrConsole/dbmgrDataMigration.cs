@@ -23,18 +23,18 @@ namespace dbmgr.utilities
         private const string DELTA_FILE_FORMAT = "{0}_{1}.{2}";
         private const string DATE_TIME_TOKEN = "{DATETIME}";
         private const string CREATOR_TOKEN = "{CREATOR}";
-        private readonly string _migrationScriptLocation = null;
-        private readonly string _currentScriptLocation = null;
-        private readonly string _postScriptLocation = null;
-        private readonly string _baseDeployDirectory = null;
-        private readonly string _connectionString = null;
-        private readonly string _providerName = null;
+        private readonly string _migrationScriptLocation;
+        private readonly string _currentScriptLocation;
+        private readonly string _postScriptLocation;
+        private readonly string _baseDeployDirectory;
+        private readonly string _connectionString;
+        private readonly string _providerName;
         private readonly int _defaultTimeout = 0;
         private readonly int _defaultTransTimeout = 0;
         private readonly IDBScripts _database;
         private readonly Dictionary<string, string> _scriptReplacements = new Dictionary<string, string>();  // Holds tokens and replacement values for scripts
 
-        public dbmgrDataMigration(IDatabaseConfiguration config, string deployDirectory, IDBScripts database, string scriptReplacementsFile, string[] replacementParameters, string netConnectionString = null)
+        public dbmgrDataMigration(IDatabaseConfiguration config, string deployDirectory, IDBScripts database, string? scriptReplacementsFile, string[]? replacementParameters, string? netConnectionString = null)
         {
             // Setup data context information
             _database = database;
@@ -91,7 +91,7 @@ namespace dbmgr.utilities
             // Create the UP script
             string fileNameUp = string.Format(DELTA_FILE_FORMAT, version, text, "up");
             string physicalFileNameUp = Path.Combine(_migrationScriptLocation, fileNameUp);
-            string templateUp = CommonUtilities.GetEmbeddedResourceContent("template.up").Replace(DATE_TIME_TOKEN, dateTimeString).Replace(CREATOR_TOKEN, creatorString);
+            string? templateUp = CommonUtilities.GetEmbeddedResourceContent("template.up")?.Replace(DATE_TIME_TOKEN, dateTimeString)?.Replace(CREATOR_TOKEN, creatorString);
             WriteTextToFile(physicalFileNameUp, templateUp);
             Log.Logger.Information("Created up script file " + physicalFileNameUp);
 
@@ -100,7 +100,7 @@ namespace dbmgr.utilities
                 // Create the DOWN script
                 string fileNameDown = string.Format(DELTA_FILE_FORMAT, version, text, "down");
                 string physicalFileNameDown = Path.Combine(_migrationScriptLocation, fileNameDown);
-                string templateDown = CommonUtilities.GetEmbeddedResourceContent("template.down").Replace(DATE_TIME_TOKEN, dateTimeString).Replace(CREATOR_TOKEN, creatorString);
+                string? templateDown = CommonUtilities.GetEmbeddedResourceContent("template.down")?.Replace(DATE_TIME_TOKEN, dateTimeString)?.Replace(CREATOR_TOKEN, creatorString);
                 WriteTextToFile(physicalFileNameDown, templateDown);
                 Log.Logger.Information("Created down script file " + physicalFileNameDown);
             }
@@ -194,8 +194,9 @@ namespace dbmgr.utilities
                         {
                             // Grab the name and content, and write the file
                             string name = idr.GetStringSafe(0);
-                            string contents = idr.GetStringSafe(1);
-                            ExtractToFile(dataContext, extractTypes[i], path, name, contents);
+                            string schema = idr.GetStringSafe(1);
+                            string contents = idr.GetStringSafe(2);
+                            ExtractToFile(dataContext, extractTypes[i], path, name, schema, contents);
                         }
                     }
                 }
@@ -204,7 +205,7 @@ namespace dbmgr.utilities
             return true;
         }
 
-        private void ExtractToFile(DataContext dataContext, string extractType, string path, string name, string contents)
+        private void ExtractToFile(DataContext dataContext, string extractType, string path, string name, string schema, string contents)
         {
             Log.Logger.Debug("Found database object {0} ({1} bytes)", name, contents?.Length);
 
@@ -244,7 +245,16 @@ namespace dbmgr.utilities
                     name = name.Replace(c, '_');
                 }
 
-                string file = String.Concat(_database.GetFileNamePrefix(extractType), name, _database.GetFileNameExtension());
+                string file;
+                if (string.IsNullOrWhiteSpace(schema))
+                {
+                    file = String.Concat(_database.GetFileNamePrefix(extractType), name, _database.GetFileNameExtension());
+                }
+                else
+                {
+                    file = String.Concat(_database.GetFileNamePrefix(extractType), schema, "_", name, _database.GetFileNameExtension());
+                }
+
                 string filename = Path.Combine(path, file);
                 WriteTextToFile(filename, contents.Trim());
                 Log.Logger.Information("Writing database object to {0}", filename);
@@ -302,7 +312,51 @@ namespace dbmgr.utilities
             return ValidateSchema();
         }
 
-        public bool DeployDeltas(string directoryPrefix = null)
+        public bool RollbackDeltas(int distance = 1, string? directoryPrefix = null)
+        {
+            bool database_updated = false;
+            string deltaScriptLocation = Path.Combine(_migrationScriptLocation, directoryPrefix ?? "");
+
+            if (!Directory.Exists(deltaScriptLocation))
+            {
+                Log.Logger.Warning("DELTAS not found at {0}; skipping DELTAS.", deltaScriptLocation);
+                return database_updated;
+            }
+
+            List<string> versions = new List<string>();
+            using DataContext dataContext = GetDataContext();
+
+            // Grab the latest delta script in desc order            
+            string versionSql = $"SELECT TOP {distance} Version FROM DatabaseVersion ORDER BY Version DESC";
+            using (IDataReader idr = dataContext.ExecuteReader(versionSql))
+            {
+                // Loop through these versions and store for processing
+                while (idr.Read())
+                {
+                    versions.Add(idr.GetStringSafe(0));
+                }
+            }
+
+            // Process each version we found
+            bool success = false;
+            foreach (string version in versions)
+            {
+                // find the matching delta file - the file could be in a subdirectory, we need to get the real location of the file.
+                string[] files = Directory.GetFiles(deltaScriptLocation, "{version}_*.down", SearchOption.AllDirectories);
+                if (files != null && files.Length > 0)
+                {
+                    // execute the file
+
+                    // remove the version from the environment
+
+                    success = true;
+                }
+            }
+
+            return success;
+        }
+
+        public bool DeployDeltas(string? directoryPrefix = null)
         {
             bool database_updated = false;
             string deltaScriptLocation = Path.Combine(_migrationScriptLocation, directoryPrefix ?? "");
@@ -626,7 +680,7 @@ namespace dbmgr.utilities
             return existingScriptInfo;
         }
 
-        public virtual void WriteTextToFile(string filename, string content)
+        public virtual void WriteTextToFile(string filename, string? content)
         {
             File.WriteAllText(filename, content);
         }
@@ -662,9 +716,9 @@ namespace dbmgr.utilities
             {
                 while (reader.Peek() != -1)
                 {
-                    String line = reader.ReadLine();
+                    string? line = reader.ReadLine();
 
-                    if (!line.StartsWith("#"))
+                    if (line != null && !line.StartsWith("#"))
                     {
                         string[] parts = line.Split('=');
                         _scriptReplacements.Add(parts[0], parts.Length > 1 && parts[1] != null ? parts[1] : "");
@@ -673,7 +727,7 @@ namespace dbmgr.utilities
             }
         }
 
-        public string CreateStandardDirectories(string[] deltaDirectories = null, string[] currentDirectories = null)
+        public string CreateStandardDirectories(string[]? deltaDirectories = null, string[]? currentDirectories = null)
         {
             if (!Directory.Exists(_migrationScriptLocation))
             {

@@ -21,9 +21,9 @@ namespace dbmgr.utilities.data
 
         private string _connectionString { get; set; }
         private DbProviderFactory _dbProviderFactory { get; set; }
-        private DbConnection _connection = null;
+        private DbConnection? _connection = null;
 
-        public static string GetConnectionString(string connectionString, string[] replacementParameters)
+        public static string? GetConnectionString(string connectionString, string[]? replacementParameters)
         {
             try
             {
@@ -105,9 +105,12 @@ namespace dbmgr.utilities.data
                 parameterValue = DBNull.Value;
             }
 
-            DbParameter parameter = this._dbProviderFactory.CreateParameter();
-            parameter.ParameterName = parameterName;
-            parameter.Value = parameterValue;
+            DbParameter? parameter = this._dbProviderFactory.CreateParameter();
+            if (parameter != null)
+            {
+                parameter.ParameterName = parameterName;
+                parameter.Value = parameterValue;
+            }
 
             return parameter;
         }
@@ -142,7 +145,7 @@ namespace dbmgr.utilities.data
         /// <param name="sql">The SQL.</param>
         /// <param name="parameterList">The parameter list.</param>
         /// <param name="timeout">The timeout.</param>
-        public virtual int ExecuteNonQuery(string sql, List<IDbDataParameter> parameterList = null, int? timeout = null)
+        public virtual int ExecuteNonQuery(string sql, List<IDbDataParameter>? parameterList = null, int? timeout = null)
         {
             return this.Execute<int>(sql, CommandType.Text, parameterList, command => command.ExecuteNonQuery(), timeout ?? _defaultTimeout);
         }
@@ -153,7 +156,7 @@ namespace dbmgr.utilities.data
         /// <param name="sql">The SQL.</param>
         /// <param name="parameterList">The parameter list.</param>
         /// <returns>The DataReader object.</returns>
-        public IDataReader ExecuteReader(string sql, List<IDbDataParameter> parameterList = null)
+        public IDataReader ExecuteReader(string sql, List<IDbDataParameter>? parameterList = null)
         {
             return this.Execute<IDataReader>(sql, CommandType.Text, parameterList, command => command.ExecuteReader());
         }
@@ -164,7 +167,7 @@ namespace dbmgr.utilities.data
         /// <param name="sql">The SQL.</param>
         /// <param name="parameterList">The parameter list.</param>
         /// <returns>The scalar object.</returns>
-        public virtual object ExecuteScalar(string sql, List<IDbDataParameter> parameterList = null)
+        public virtual object ExecuteScalar(string sql, List<IDbDataParameter>? parameterList = null)
         {
             return this.Execute<object>(sql, CommandType.Text, parameterList, command => command.ExecuteScalar());
         }
@@ -175,7 +178,7 @@ namespace dbmgr.utilities.data
         /// <param name="fileName">Name of the file.</param>
         /// <param name="splitCharacter">How to split the file into chunks.</param>
         /// <param name="scriptReplacements">Optional token/replacement values.</param>
-        public virtual void ExecuteScript(string fileName, string splitCharacter, Dictionary<string, string> scriptReplacements = null)
+        public virtual void ExecuteScript(string fileName, string splitCharacter, Dictionary<string, string>? scriptReplacements = null)
         {
             FileInfo fi = new FileInfo(fileName);
             using (StreamReader sr = new StreamReader(fi.Open(FileMode.Open, FileAccess.Read)))
@@ -227,9 +230,12 @@ namespace dbmgr.utilities.data
 
             if (_connection == null)
             {
-                DbConnection conn = this._dbProviderFactory.CreateConnection();
-                conn.ConnectionString = this._connectionString;
-                conn.Open();
+                DbConnection? conn = this._dbProviderFactory.CreateConnection();
+                if (conn != null)
+                {
+                    conn.ConnectionString = this._connectionString;
+                    conn.Open();
+                }
                 _connection = conn;
             }
 
@@ -255,9 +261,9 @@ namespace dbmgr.utilities.data
         /// <returns>
         /// The result of executing the command.
         /// </returns>
-        private TResult Execute<TResult>(string commandText, CommandType commandType, IList<IDbDataParameter> parameters, Func<IDbCommand, TResult> commandExecute, int? timeout = null)
+        private TResult Execute<TResult>(string commandText, CommandType commandType, IList<IDbDataParameter>? parameters, Func<IDbCommand, TResult> commandExecute, int? timeout = null)
         {
-            TResult result = default;
+            TResult? result = default;
             try
             {
                 IDbConnection connection = this.GetConnection();

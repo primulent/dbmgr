@@ -22,7 +22,7 @@ namespace dbmgr.utilities.common
         /// <summary>
         /// replace tokens in the given content
         /// </summary>
-        public static string ReplaceTokensInContent(string content, Dictionary<string, string> replacementValues)
+        public static string ReplaceTokensInContent(string? content, Dictionary<string, string>? replacementValues)
         {
             if (replacementValues == null)
             {
@@ -48,7 +48,7 @@ namespace dbmgr.utilities.common
             return string.Format("{0:00}:{1:00}:{2:00}.{3:00}", time.Elapsed.Hours, time.Elapsed.Minutes, time.Elapsed.Seconds, time.Elapsed.Milliseconds / 10);
         }
 
-        public static string Replace(this string originalString, string oldValue, string newValue, StringComparison comparisonType)
+        public static string Replace(this string? originalString, string? oldValue, string? newValue, StringComparison comparisonType)
         {
             if (originalString == null || oldValue == null || newValue == null)
                 return originalString;
@@ -80,7 +80,7 @@ namespace dbmgr.utilities.common
             }
         }
 
-        public static CRCResult ComputeAdlerCRC(string fileName)
+        public static CRCResult ComputeAdlerCRC(string? fileName)
         {
             const ushort MOD_ADLER = 65521;
 
@@ -149,7 +149,7 @@ namespace dbmgr.utilities.common
         }
 
 
-        public static Dictionary<string, int> TopSort(Dictionary<string, List<string>> dependencies, bool breakCycles = false)
+        public static Dictionary<string, int> TopSort(Dictionary<string, List<string>>? dependencies, bool breakCycles = false)
         {
             Dictionary<string, int> newOrder = new Dictionary<string, int>();
 
@@ -199,22 +199,28 @@ namespace dbmgr.utilities.common
             return newOrder;
         }
 
-        public static string GetEmbeddedResourceContent(string resourceName)
+        public static string? GetEmbeddedResourceContent(string? resourceName)
         {
             if (resourceName == null)
                 return null;
 
             Assembly assembly = Assembly.GetExecutingAssembly();
-            string filename = assembly.GetManifestResourceNames().Where(n => n.Contains(resourceName)).FirstOrDefault();
-            if (filename != null)
+            if (assembly != null)
             {
-                using (Stream s = assembly.GetManifestResourceStream(filename))
+                string? filename = assembly.GetManifestResourceNames().Where(n => n.Contains(resourceName)).FirstOrDefault();
+                if (filename != null)
                 {
-                    // HACK: Had to hack this since first 3 bytes seem wrong... and didn't want to spend time on this
-                    byte[] bytes = new byte[s.Length - 3];
-                    s.Position = 3;
-                    s.Read(bytes, 0, (int)s.Length - 3);
-                    return Encoding.Default.GetString(bytes);
+                    using (Stream? s = assembly.GetManifestResourceStream(filename))
+                    {
+                        if (s != null)
+                        {
+                            // HACK: Had to hack this since first 3 bytes seem wrong... and didn't want to spend time on this
+                            byte[] bytes = new byte[s.Length - 3];
+                            s.Position = 3;
+                            s.Read(bytes, 0, (int)s.Length - 3);
+                            return Encoding.Default.GetString(bytes);
+                        }
+                    }
                 }
             }
 
