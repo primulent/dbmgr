@@ -12,6 +12,7 @@
     <None Remove="appsettings.json" />
     <None Remove="TestContent\CRCTest1.txt" />
     <None Remove="TestContent\CRCTest2.txt" />
+    <None Remove="TestContent\CRCTest3.txt" />
     <None Remove="TestContent\template.up" />
     <None Remove="TestContent\vault_load.txt" />
     <None Remove="TestContent\vault_load_wa.txt" />
@@ -23,6 +24,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestContent\CRCTest1.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestContent\CRCTest3.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestContent\CRCTest2.txt">

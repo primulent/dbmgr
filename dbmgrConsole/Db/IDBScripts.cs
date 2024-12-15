@@ -75,6 +75,8 @@ namespace dbmgr.utilities.db
 
         string GetInsertMigrationRecordSQL();
 
+        string GetRemoveMigrationRecordSQL();
+
         string GetUpdateCurrentRecordSQL();
 
         string GetInsertCurrentRecordSQL();

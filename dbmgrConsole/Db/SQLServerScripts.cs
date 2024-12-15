@@ -161,7 +161,7 @@ namespace dbmgr.utilities.db
             int lineNo = 1;
             foreach (string s in File.ReadAllLines(fileName))
             {
-                if (s.Trim().StartsWith("USE", StringComparison.InvariantCultureIgnoreCase))
+                if (s.Trim().StartsWith("USE ", StringComparison.InvariantCultureIgnoreCase))
                 {
                     Log.Logger.Warning("Script {0} may not contain USE statement on line {1}.", fileName, lineNo);
                     validation = false;
@@ -297,6 +297,10 @@ select o.type, o.type_desc, o.name, a.referenced_schema_name from sys.sql_expres
         public string GetInsertMigrationRecordSQL()
         {
             return "INSERT INTO DatabaseVersion (SystemId, Version) VALUES (1, @version)";
+        }
+        public string GetRemoveMigrationRecordSQL()
+        {
+            return "DELETE FROM DatabaseVersion  WHERE SystemId = 1 AND Version = @version";
         }
 
         public string GetUpdateCurrentRecordSQL()

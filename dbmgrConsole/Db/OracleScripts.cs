@@ -144,7 +144,12 @@ namespace dbmgr.utilities.db
 
         public string GetInsertMigrationRecordSQL()
         {
-            return "INSERT INTO DB_VERSION (SYSTEM_ID, VERSION) VALUES (1, :version)";
+            return "INSERT INTO DB_VERSION (SYSTEM_ID, VERSION) VALUES (1, :version)";        
+        }
+
+        public string GetRemoveMigrationRecordSQL()
+        {
+            return "DELETE FROM DB_VERSION WHERE SYSTEM_ID = 1 AND VERSION = :version";
         }
 
         public string GetUpdateCurrentRecordSQL()

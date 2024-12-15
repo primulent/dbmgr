@@ -22,7 +22,7 @@ namespace dbmgr.utilities.common
         /// <summary>
         /// replace tokens in the given content
         /// </summary>
-        public static string ReplaceTokensInContent(string? content, Dictionary<string, string>? replacementValues)
+        public static string ReplaceTokensInContent(string? content, Dictionary<string, string>? replacementValues, bool validateNoTokensLeft = true)
         {
             if (replacementValues == null)
             {
@@ -35,7 +35,7 @@ namespace dbmgr.utilities.common
             }
 
             // Check content has no more tokens left
-            if (ContentHasTokens(content))
+            if (validateNoTokensLeft && ContentHasTokens(content))
             {
                 throw new ApplicationException("unmatched tokens in content");
             }
@@ -80,67 +80,86 @@ namespace dbmgr.utilities.common
             }
         }
 
-        public static CRCResult ComputeAdlerCRC(string? fileName)
+        public static CRCResult ComputeAdlerCRC(string fileName, Dictionary<string, string>? scriptReplacements = null)
         {
             const ushort MOD_ADLER = 65521;
 
             CRCResult crcResult = new CRCResult();
 
-            uint a = 1;
-            uint b = 0;
             ulong totalLength = 0;
 
-            try
+            if (!string.IsNullOrWhiteSpace(fileName))
             {
-                if (File.Exists(fileName))
+                try
                 {
-                    using (FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    if (File.Exists(fileName))
                     {
-                        if (fs != null)
+                        string text = File.ReadAllText(fileName, Encoding.UTF8);
+                        if (scriptReplacements != null)
                         {
-                            while (true)
+                            text = CommonUtilities.ReplaceTokensInContent(text, scriptReplacements, false);
+                        }
+
+                        byte[] bytesWithoutBom = Encoding.UTF8.GetBytes(text);
+                        byte[] utf8Bom = new byte[] { 0xEF, 0xBB, 0xBF };
+                        byte[] fileBytes = new byte[utf8Bom.Length + bytesWithoutBom.Length];
+
+                        // Copy the BOM to the new array and the original bytes starting after the BOM
+                        Array.Copy(utf8Bom, 0, fileBytes, 0, utf8Bom.Length);
+                        Array.Copy(bytesWithoutBom, 0, fileBytes, utf8Bom.Length, bytesWithoutBom.Length);
+
+                        // using (FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (MemoryStream fs = new MemoryStream(fileBytes))
+                        {
+                            if (fs != null)
                             {
-                                int i = 0;
-                                byte[] data = new byte[5550];
-                                int len = fs.Read(data, 0, 5550);
-                                totalLength += (uint)len;
-                                if (len > 0)
+                                uint a = 1;
+                                uint b = 0;
+
+                                while (true)
                                 {
-                                    int tlen = len > 5550 ? 5550 : len;
-                                    do
+                                    int i = 0;
+                                    byte[] data = new byte[5550];
+                                    int len = fs.Read(data, 0, 5550);
+                                    totalLength += (uint)len;
+                                    if (len > 0)
                                     {
-                                        a += data[i++];
-                                        b += a;
-                                    } while (--tlen > 0);
+                                        int tlen = len > 5550 ? 5550 : len;
+                                        do
+                                        {
+                                            a += data[i++];
+                                            b += a;
+                                        } while (--tlen > 0);
 
-                                    a = (a & 0xffff) + (a >> 16) * (65536 - MOD_ADLER);
-                                    b = (b & 0xffff) + (b >> 16) * (65536 - MOD_ADLER);
+                                        a = (a & 0xffff) + (a >> 16) * (65536 - MOD_ADLER);
+                                        b = (b & 0xffff) + (b >> 16) * (65536 - MOD_ADLER);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
                                 }
-                                else
-                                {
-                                    break;
-                                }
+
+                                /* It can be shown that a <= 0x1013a here, so a single subtract will do. */
+                                if (a >= MOD_ADLER)
+                                    a -= MOD_ADLER;
+
+                                /* It can be shown that b can reach 0xffef1 here. */
+                                b = (b & 0xffff) + (b >> 16) * (65536 - MOD_ADLER);
+                                if (b >= MOD_ADLER)
+                                    b -= MOD_ADLER;
+
+                                crcResult.crc = (b << 16) | a;
+                                crcResult.length = totalLength;
+                                return crcResult;
                             }
-
-                            /* It can be shown that a <= 0x1013a here, so a single subtract will do. */
-                            if (a >= MOD_ADLER)
-                                a -= MOD_ADLER;
-
-                            /* It can be shown that b can reach 0xffef1 here. */
-                            b = (b & 0xffff) + (b >> 16) * (65536 - MOD_ADLER);
-                            if (b >= MOD_ADLER)
-                                b -= MOD_ADLER;
-
-                            crcResult.crc = (b << 16) | a;
-                            crcResult.length = totalLength;
-                            return crcResult;
                         }
                     }
                 }
-            }
-            catch
-            {
-                totalLength = 0;
+                catch
+                {
+                    totalLength = 0;
+                }
             }
 
             crcResult.crc = 0;

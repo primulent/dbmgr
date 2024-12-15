@@ -63,6 +63,31 @@ namespace dbmgr.utilities.common.Tests
             // Not the same as another file
             CommonUtilities.CRCResult crc_check2 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest2.txt");
             Assert.NotEqual(crc_check, crc_check2);
+
+            // Test replacement values
+            expected = new CommonUtilities.CRCResult(3961000074, 54);
+            Dictionary<string, string> replacementValues = new Dictionary<string, string>();            
+            CommonUtilities.CRCResult crc_repl_check1 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest3.txt", replacementValues);
+            Assert.Equal(expected, crc_repl_check1); // ensure the file is what we expect
+
+            // Add a replacement value, does it change?
+            replacementValues.Add("TEST", "VALUE");
+            CommonUtilities.CRCResult crc_repl_check2 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest3.txt", replacementValues);
+            Assert.NotEqual(crc_repl_check1, crc_repl_check2);
+            // If we don't change anything, it stays the same
+            CommonUtilities.CRCResult crc_repl_check2a = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest3.txt", replacementValues);
+            Assert.Equal(crc_repl_check2, crc_repl_check2a);
+
+            // Add another replacement value, should not equal either the first or second
+            replacementValues.Add("TOKEN", "NEW");
+            CommonUtilities.CRCResult crc_repl_check3 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest3.txt", replacementValues);
+            Assert.NotEqual(crc_repl_check1, crc_repl_check2);
+            Assert.NotEqual(crc_repl_check1, crc_repl_check3);
+
+            // Change the VALUE of the existing token and it should change 
+            replacementValues["TOKEN"] = "NEW2";
+            CommonUtilities.CRCResult crc_repl_check4 = CommonUtilities.ComputeAdlerCRC("TestContent/CRCTest3.txt", replacementValues);
+            Assert.NotEqual(crc_repl_check3, crc_repl_check4);
         }
 
         [Fact]

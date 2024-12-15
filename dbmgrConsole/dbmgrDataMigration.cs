@@ -349,14 +349,53 @@ namespace dbmgr.utilities
             foreach (string version in versions)
             {
                 // find the matching delta file - the file could be in a subdirectory, we need to get the real location of the file.
-                string[] files = Directory.GetFiles(deltaScriptLocation, "{version}_*.down", SearchOption.AllDirectories);
-                if (files != null && files.Length > 0)
+                string[] files = Directory.GetFiles(deltaScriptLocation, $"{version}_*.down", SearchOption.AllDirectories);
+                if (files != null && files.Length == 1)
                 {
-                    // execute the file
+                    string deltaFileName = files[0];
+                    string rawFileName = Path.GetFileName(deltaFileName);
 
-                    // remove the version from the environment
+                    // execute the file
+                    Stopwatch elapsedTime = Stopwatch.StartNew();
+
+                    Log.Logger.Information("Validating delta script: {0}", rawFileName);
+                    bool validateFileResult = _database.ValidateFile(deltaFileName);
+                    if (ValidateFiles && !validateFileResult)
+                    {
+                        throw new SystemException($"Error validating script {deltaFileName}");
+                    }
+
+                    Log.Logger.Information("Running delta script: {0}", rawFileName);
+                    using (TransactionScope ts = dataContext.StartTransaction(TransactionScopeOption.Required))
+                    {
+                        if (!NoDbUpdates)
+                        {
+                            // Run the referenced script
+                            try
+                            {
+                                dataContext.ExecuteScript(deltaFileName, _database.GetSplitPhrase(), _scriptReplacements);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new SystemException($"Error running script {deltaFileName}: {ex.Message}", ex);
+                            }
+
+                            // REMOVE the version from the environment
+                            IDbDataParameter param = dataContext.CreateParameter(_database.GetParameterName("version"), version);
+                            dataContext.ExecuteNonQuery(_database.GetRemoveMigrationRecordSQL(), new List<IDbDataParameter>() { param });
+
+                            // Commit the transaction
+                            ts.Complete();
+                        }
+
+                        Log.Logger.Information("Finished running delta script {0} in {1}", deltaFileName, elapsedTime.ShowElapsedTime());
+                    }
 
                     success = true;
+                }
+                else
+                {
+                    Log.Logger.Error("Did not find exactly 1 down script {1} in {0}", deltaScriptLocation, $"{version}_*.down");
                 }
             }
 
@@ -492,7 +531,8 @@ namespace dbmgr.utilities
                     foreach (string currentFileName in scriptsToRun)
                     {
                         // Get the CRC and length of the file
-                        CommonUtilities.CRCResult crcResult = CommonUtilities.ComputeAdlerCRC(currentFileName);
+                        CommonUtilities.CRCResult crcResult = CommonUtilities.ComputeAdlerCRC(currentFileName, _scriptReplacements);
+                        // CommonUtilities.CRCResult crcResult = CommonUtilities.ComputeAdlerCRC(currentFileName);
                         uint crc = crcResult.crc;
                         ulong length = crcResult.length;
 
