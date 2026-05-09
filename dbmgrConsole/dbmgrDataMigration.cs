@@ -355,6 +355,16 @@ namespace dbmgr.utilities
                     string deltaFileName = files[0];
                     string rawFileName = Path.GetFileName(deltaFileName);
 
+                    // is this a one-way migration?
+                    foreach (string s in File.ReadAllLines(deltaFileName))
+                    {
+                        if (s.Trim().Equals("{ONEWAY_MIGRATION}", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            Log.Logger.Error("Unable to rollback script {0} as it is marked as a one-way migration: {1}.", rawFileName, s);
+                            return false;
+                        }
+                    }
+
                     // execute the file
                     Stopwatch elapsedTime = Stopwatch.StartNew();
 
