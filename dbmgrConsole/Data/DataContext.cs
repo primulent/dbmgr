@@ -64,9 +64,9 @@ namespace dbmgr.utilities.data
                 // Grab provider
                 this._dbProviderFactory = SafeProviderName(connectionProvider);
             }
-            catch (ArgumentException)
+            catch (Exception ex)
             {
-                throw new ArgumentException("A connection string must be specified. Provider: " + connectionProvider + " Connection: " + connectionString);
+                throw new ArgumentException("A connection string must be specified. Provider: " + connectionProvider + " Connection: " + connectionString, ex);
             }
         }
 

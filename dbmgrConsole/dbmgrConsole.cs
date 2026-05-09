@@ -182,7 +182,7 @@ namespace dbmgr.utilities
                 }
                 else if (!string.IsNullOrWhiteSpace(options.ConnectStringFile))
                 {
-                    string input = File.ReadAllText(options.ConnectStringFile);
+                    string input = File.ReadAllText(options.ConnectStringFile).Trim();
                     if (!string.IsNullOrWhiteSpace(input))
                     {
                         Log.Logger.Information("Connection string override from file");
