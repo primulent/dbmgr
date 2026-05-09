@@ -5,8 +5,6 @@ using dbmgr.utilities.Db;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Data;
-using System.Data.Common;
-using System.Data.SqlClient;
 
 namespace dbmgr.utilities.Tests
 {

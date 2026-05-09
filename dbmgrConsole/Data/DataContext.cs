@@ -59,7 +59,7 @@ namespace dbmgr.utilities.data
                     throw new ArgumentException("No connection string");
                 }
                 // Register Providers
-                DbProviderFactories.RegisterFactory("System.Data.SqlClient", SqlClientFactory.Instance);
+                DbProviderFactories.RegisterFactory("Microsoft.Data.SqlClient", SqlClientFactory.Instance);
 
                 // Grab provider
                 this._dbProviderFactory = SafeProviderName(connectionProvider);
@@ -246,7 +246,7 @@ namespace dbmgr.utilities.data
 
         internal static DbProviderFactory SafeProviderName(string key)
         {
-            return DbProviderFactories.GetFactory(string.IsNullOrWhiteSpace(key) ? "System.Data.SqlClient" : key);
+            return DbProviderFactories.GetFactory(string.IsNullOrWhiteSpace(key) ? "Microsoft.Data.SqlClient" : key);
         }
 
         /// <summary>
